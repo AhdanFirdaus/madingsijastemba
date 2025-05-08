@@ -1,0 +1,74 @@
+import { FiX, FiBarChart2, FiFileText, FiMessageSquare, FiUsers, FiLogOut } from "react-icons/fi";
+import { Link } from "react-router";
+
+function Sidebar({ isOpen, toggleSidebar }) {
+  const navItems = [
+    { name: 'Statistic', path: '/admin/statistic', icon: <FiBarChart2 className="w-5 h-5" /> },
+    { name: 'Articles', path: '/admin/articles', icon: <FiFileText className="w-5 h-5" /> },
+    { name: 'Comments', path: '/admin/comments', icon: <FiMessageSquare className="w-5 h-5" /> },
+    { name: 'Users', path: '/admin/users', icon: <FiUsers className="w-5 h-5" /> },
+  ];
+
+  return (
+    <>
+      {/* Overlay for mobile */}
+      <div 
+        className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 md:hidden ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={toggleSidebar}
+      ></div>
+
+      {/* Sidebar */}
+      <aside 
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-rose-500 transform transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        } flex flex-col h-screen px-5 py-8 overflow-y-auto border-r rtl:border-r-0 rtl:border-l shadow-lg md:shadow-none`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-white text-xl font-bold">Admin Mading</h1>
+          <button 
+            className="md:hidden text-white focus:outline-none p-2 rounded-md hover:bg-rose-400 transition-colors duration-200"
+            onClick={toggleSidebar}
+          >
+            <FiX size={20} />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex flex-col justify-between flex-1 mt-6">
+          <nav className="-mx-3 space-y-6">
+            <div className="space-y-3">
+              {navItems.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className="flex items-center px-3 py-2 text-white transition-colors duration-300 transform rounded-lg hover:bg-rose-400"
+                  onClick={toggleSidebar}
+                >
+                  {item.icon}
+                  <span className="mx-2 text-sm font-medium">{item.name}</span>
+                </Link>
+              ))}
+            </div>
+          </nav>
+
+          {/* Footer */}
+          <div className="mt-auto">
+            <Link 
+              to="/"
+              className="flex items-center px-3 py-2 text-white transition-colors duration-300 transform rounded-lg hover:bg-rose-400"
+              onClick={toggleSidebar}
+            >
+              <FiLogOut className="w-5 h-5" />
+              <span className="mx-2 text-sm font-medium">Logout</span>
+            </Link>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+export default Sidebar;
