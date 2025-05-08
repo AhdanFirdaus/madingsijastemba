@@ -1,8 +1,9 @@
 import { FiX, FiBarChart2, FiFileText, FiMessageSquare, FiUsers, FiLogOut } from "react-icons/fi";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useLocation } from "react-router";
 
 function Sidebar({ isOpen, toggleSidebar }) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const navItems = [
     { name: 'Statistic', path: '/admin/statistic', icon: <FiBarChart2 className="w-5 h-5" /> },
@@ -10,6 +11,13 @@ function Sidebar({ isOpen, toggleSidebar }) {
     { name: 'Comments', path: '/admin/comments', icon: <FiMessageSquare className="w-5 h-5" /> },
     { name: 'Users', path: '/admin/users', icon: <FiUsers className="w-5 h-5" /> },
   ];
+
+  // Determine the current page title based on the route
+  const getPageTitle = () => {
+    const currentPath = location.pathname;
+    const matchedItem = navItems.find(item => item.path === currentPath);
+    return matchedItem ? matchedItem.name : 'Admin Mading'; // Fallback title
+  };
 
   const handleLogout = async () => {
     try {
@@ -47,13 +55,13 @@ function Sidebar({ isOpen, toggleSidebar }) {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-rose-500 transform transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-rose-500 flex flex-col h-screen px-5 py-8 overflow-y-auto border-r rtl:border-r-0 rtl:border-l shadow-lg md:shadow-none transform transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } flex flex-col h-screen px-5 py-8 overflow-y-auto border-r rtl:border-r-0 rtl:border-l shadow-lg md:shadow-none`}
+        } md:translate-x-0`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-white text-xl font-bold">Admin Mading</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-white text-xl font-bold">{getPageTitle()}</h1>
           <button 
             className="md:hidden text-white focus:outline-none p-2 rounded-md hover:bg-rose-400 transition-colors duration-200"
             onClick={toggleSidebar}
@@ -63,14 +71,16 @@ function Sidebar({ isOpen, toggleSidebar }) {
         </div>
 
         {/* Navigation */}
-        <div className="flex flex-col justify-between flex-1 mt-6">
+        <div className="flex flex-col justify-between flex-1">
           <nav className="-mx-3 space-y-6">
             <div className="space-y-3">
               {navItems.map((item) => (
                 <Link
                   key={item.name}
                   to={item.path}
-                  className="flex items-center px-3 py-2 text-white transition-colors duration-300 transform rounded-lg hover:bg-rose-400"
+                  className={`flex items-center px-3 py-2 text-white transition-colors duration-300 transform rounded-lg hover:bg-rose-400 ${
+                    location.pathname === item.path ? 'bg-rose-600' : ''
+                  }`}
                   onClick={toggleSidebar}
                 >
                   {item.icon}
@@ -84,7 +94,7 @@ function Sidebar({ isOpen, toggleSidebar }) {
           <div className="mt-auto">
             <button
               onClick={handleLogout}
-              className="flex items-center w-full px-3 py-2 text-white transition-colors duration-300 transform rounded-lg hover:bg-rose-400 cursor-pointer"
+              className="flex items-center w-full px-3 py-2 text-white transition-colors duration-300 transform rounded-lg hover:bg-rose-400 cursor-pointer bg-rose-600"
             >
               <FiLogOut className="w-5 h-5" />
               <span className="mx-2 text-sm font-medium">Logout</span>
@@ -92,6 +102,11 @@ function Sidebar({ isOpen, toggleSidebar }) {
           </div>
         </div>
       </aside>
+
+      {/* Main content wrapper to prevent sidebar scrolling */}
+      <div className="md:ml-64">
+        {/* Content will be rendered here by the parent component (e.g., Users.jsx) */}
+      </div>
     </>
   );
 }
