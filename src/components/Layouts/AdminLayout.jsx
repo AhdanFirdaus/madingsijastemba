@@ -25,10 +25,9 @@ export default function AdminLayout({ children }) {
           </button>
           <div className="flex-1">
             <Breadcrumb />
-            <h2 className="text-2xl font-bold">Admin Dashboard</h2>
           </div>
         </header>
-        <div className="p-4 sm:p-8">
+        <div className="px-4 sm:px-8">
           {children}
         </div>
       </main>

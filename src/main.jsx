@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
-import { createBrowserRouter, RouterProvider } from 'react-router';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router';
 import ErrorPage from './Pages/404';
 import Register from './Pages/register';
 import Login from './Pages/login';
@@ -10,6 +10,32 @@ import Admin from './Pages/Admin/admin';
 import Articles from './Pages/Admin/articles';
 import Comments from './Pages/Admin/comments';
 import Users from './Pages/Admin/users';
+
+
+// ProtectedRoute Component to secure admin routes
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem('token');
+  let userRole = null;
+
+  // Decode token to get user role (assuming JWT)
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      userRole = payload.role;
+    } catch (err) {
+      console.error('Invalid token:', err);
+      localStorage.removeItem('token');
+      return <Navigate to="/login" replace />;
+    }
+  }
+
+  // Check if user is authenticated and has admin role
+  if (!token || userRole !== 'admin') {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
 
 const router = createBrowserRouter([
   {
@@ -27,23 +53,27 @@ const router = createBrowserRouter([
   },
   {
     path: 'admin',
-    element: <Admin />,
+    element: (
+      <ProtectedRoute>
+        <Admin />
+      </ProtectedRoute>
+    ),
     children: [
       // {
       //   path: 'statistic',
-      //   element: <Statistic />,
+      //   element: <ProtectedRoute><Statistic /></ProtectedRoute>,
       // },
       {
         path: 'articles',
-        element: <Articles />,
+        element: <ProtectedRoute><Articles /></ProtectedRoute>,
       },
       {
         path: 'comments',
-        element: <Comments />,
+        element: <ProtectedRoute><Comments /></ProtectedRoute>,
       },
       {
         path: 'users',
-        element: <Users />,
+        element: <ProtectedRoute><Users /></ProtectedRoute>,
       },
     ],
   },
