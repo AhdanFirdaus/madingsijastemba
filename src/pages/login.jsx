@@ -20,49 +20,62 @@ function Login() {
     try {
       const response = await api.post('/auth/login', { username, password });
       const { token, user } = response.data;
-      // Simpan token dan data user di localStorage
+
+      // Validate user role
+      if (!user.role) {
+        throw new Error('User role not provided');
+      }
+
+      // Save token and user data in localStorage
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
-      setSuccess('Login berhasil! Mengarahkan ke blog...');
-      setTimeout(() => navigate('/'), 2000); // Redirect ke dashboard
+
+      setSuccess('Login successful! Redirecting...');
+      // Redirect based on role
+      setTimeout(() => {
+        if (user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
+      }, 2000);
     } catch (err) {
-      setError(err.response?.data?.error || 'Login gagal');
+      setError(err.response?.data?.error || 'Login failed');
     }
   };
 
   return (
-    <AuthLayout 
-    title="Sign in to your account"
-    bottomText="Don't have an account?"
-    bottomLink="Sign up"
-    bottomHref="/register"
+    <AuthLayout
+      title="Sign in to your account"
+      bottomText="Don't have an account?"
+      bottomLink="Sign up"
+      bottomHref="/register"
     >
+      {error && <p className="text-rose-500 text-center mb-4">{error}</p>}
+      {success && <p className="text-green-500 text-center mb-4">{success}</p>}
 
-    {error && <p className="text-rose-500 text-center mb-4">{error}</p>}
-    {success && <p className="text-green-500 text-center mb-4">{success}</p>}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Input
+          label="Username"
+          id="username"
+          name="username"
+          type="text"
+          autoComplete="username"
+          onChange={(e) => setUsername(e.target.value)}
+        />
 
-    <form onSubmit={handleSubmit} className="space-y-6">
-            <Input
-            label="Username"
-            id="username"
-            name="username"
-            type="text"
-            autoComplete="username"
-            onChange={(e) => setUsername(e.target.value)}
-            />
+        <Input
+          label="Password"
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-            <Input
-              label="Password"
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              onChange={(e) => setPassword(e.target.value)}
-            />
-
-          <BtnAuth type="submit" text="Sign in" />
-          </form>
-  </AuthLayout>
+        <BtnAuth type="submit" text="Sign in" />
+      </form>
+    </AuthLayout>
   );
 }
 
