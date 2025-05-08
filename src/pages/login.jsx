@@ -4,6 +4,8 @@ import api from '../api/axios';
 import Input from '../components/Elements/Input';
 import BtnAuth from '../components/Elements/BtnAuth';
 import AuthLayout from '../components/Layouts/AuthLayout';
+import { FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -51,8 +53,20 @@ function Login() {
       bottomLink="Sign up"
       bottomHref="/register"
     >
-      {error && <p className="text-rose-500 text-center mb-4">{error}</p>}
-      {success && <p className="text-green-500 text-center mb-4">{success}</p>}
+
+    {error && (
+      <div className="flex items-center bg-rose-100 text-rose-700 p-4 rounded-lg mb-6 animate-fade-in">
+        <FiAlertCircle className="mr-2 text-xl" />
+          <span>{error}</span>
+      </div>
+    )}
+    
+    {success && (
+      <div className="flex items-center bg-green-100 text-green-700 p-4 rounded-lg mb-6 animate-fade-in">
+        <FiCheckCircle className="mr-2 text-xl" />
+        <span>{success}</span>
+      </div>
+    )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Input
