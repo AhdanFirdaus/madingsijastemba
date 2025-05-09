@@ -231,12 +231,12 @@ export default function Users() {
             </div>
             <div className="flex justify-end space-x-2">
               <Button
-                color="gray"
+                color="rose"
                 onClick={() => setIsModalOpen(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" color="rose">
+              <Button type="submit" color="green">
                 Create
               </Button>
             </div>
@@ -304,7 +304,7 @@ export default function Users() {
                 <button
                   onClick={handlePrevPage}
                   disabled={currentPage === 1}
-                  className={`p-2 rounded-full ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-rose-500 hover:bg-rose-100'}`}
+                  className={`p-2 rounded-full cursor-pointer ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-rose-500 hover:bg-rose-100'}`}
                 >
                   <FiChevronLeft size={20} />
                 </button>
@@ -312,7 +312,7 @@ export default function Users() {
                   <button
                     key={number}
                     onClick={() => handlePageChange(number)}
-                    className={`px-4 py-2 rounded-md ${currentPage === number ? 'bg-rose-500 text-white' : 'text-rose-500 hover:bg-rose-100'}`}
+                    className={`px-4 py-2 rounded-md cursor-pointer ${currentPage === number ? 'bg-rose-500 text-white' : 'text-rose-500 hover:bg-rose-100'}`}
                   >
                     {number}
                   </button>
@@ -320,7 +320,7 @@ export default function Users() {
                 <button
                   onClick={handleNextPage}
                   disabled={currentPage === totalPages}
-                  className={`p-2 rounded-full ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-rose-500 hover:bg-rose-100'}`}
+                  className={`p-2 rounded-full cursor-pointer ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-rose-500 hover:bg-rose-100'}`}
                 >
                   <FiChevronRight size={20} />
                 </button>
