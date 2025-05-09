@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
-import { FiTrash2, FiAlertCircle, FiCheckCircle, FiLoader, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiTrash2, FiAlertCircle, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import Button from '../../components/Elements/Button';
 import Modal from '../../components/Elements/Modal';
+import Notification from '../../components/Elements/Notification';
 
 export default function Users() {
   const [users, setUsers] = useState([]);
@@ -150,25 +151,9 @@ export default function Users() {
           <Button onClick={() => setIsModalOpen(true)}>Create User</Button>
         </div>
 
-        {error && (
-          <div className="flex items-center bg-rose-100 text-rose-700 p-4 rounded-lg mb-6 animate-fade-in">
-            <FiAlertCircle className="mr-2 text-xl" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="flex items-center bg-green-100 text-green-700 p-4 rounded-lg mb-6 animate-fade-in">
-            <FiCheckCircle className="mr-2 text-xl" />
-            <span>{success}</span>
-          </div>
-        )}
-
-        {loading && (
-          <div className="flex justify-center items-center py-12">
-            <FiLoader className="animate-spin text-rose-500 text-4xl" />
-          </div>
-        )}
+        <Notification message={error} type="error" />
+        <Notification message={success} type="success" />
+        <Notification loading={loading} />
 
         {!loading && users.length === 0 && (
           <div className="text-center text-gray-600 py-12">
