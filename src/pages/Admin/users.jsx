@@ -11,6 +11,8 @@ export default function Users() {
   const [success, setSuccess] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -82,15 +84,19 @@ export default function Users() {
   };
 
   // Handle user deletion
-  const handleDelete = async (userId) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus pengguna ini?')) return;
+  const confirmDelete = (user) => {
+    setUserToDelete(user);
+    setIsConfirmModalOpen(true);
+  };
 
+  const executeDelete = async () => {
+    if (!userToDelete) return;
     try {
       setError('');
       setSuccess('');
-      const response = await api.delete('/users', { data: { id: userId } });
+      const response = await api.delete('/users', { data: { id: userToDelete.id } });
       if (response.data.success) {
-        const updatedUsers = users.filter(user => user.id !== userId);
+        const updatedUsers = users.filter(user => user.id !== userToDelete.id);
         setUsers(updatedUsers);
         const totalPages = Math.ceil(updatedUsers.length / usersPerPage);
         if (currentPage > totalPages && totalPages > 0) {
@@ -102,8 +108,12 @@ export default function Users() {
     } catch (err) {
       setError(err.response?.data?.error || 'Gagal menghapus pengguna');
       setTimeout(() => setError(''), 3000);
+    } finally {
+      setIsConfirmModalOpen(false);
+      setUserToDelete(null);
     }
   };
+  
 
   // Pagination logic
   const totalPages = Math.ceil(users.length / usersPerPage);
@@ -176,6 +186,7 @@ export default function Users() {
           }}
           title="Create New User"
         >
+
           <form onSubmit={handleCreateUser}>
             {formError && (
               <div className="flex items-center bg-rose-100 text-rose-700 p-3 rounded-md mb-4">
@@ -243,6 +254,38 @@ export default function Users() {
           </form>
         </Modal>
 
+        {/* Confirm Delete User */}
+        <Modal
+          isOpen={isConfirmModalOpen}
+          onClose={() => {
+            setIsConfirmModalOpen(false);
+            setUserToDelete(null);
+          }}
+          title="Konfirmasi Hapus Pengguna"
+        >
+          <div className="mb-4">
+            Apakah Anda yakin ingin menghapus pengguna{' '}
+            <strong>{userToDelete?.username}</strong>?
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button
+              color="gray"
+              onClick={() => {
+                setIsConfirmModalOpen(false);
+                setUserToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="rose"
+              onClick={executeDelete}
+            >
+              Confirm Delete
+            </Button>
+          </div>
+        </Modal>
+
         {!loading && users.length > 0 && (
           <div className="bg-white shadow-lg rounded-lg overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -286,7 +329,7 @@ export default function Users() {
                     </td>
                     <td className="py-4 px-6">
                       <button
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => confirmDelete(user)}
                         className="text-rose-500 hover:text-rose-700 transition-colors cursor-pointer"
                         title="Hapus pengguna"
                       >
