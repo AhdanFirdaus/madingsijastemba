@@ -32,9 +32,9 @@ function Register() {
         password: trimmedPassword 
       });
       setSuccess(response.data.message);
-      setTimeout(() => navigate('/login'), 2000); // Redirect ke login setelah 2 detik
+      setTimeout(() => navigate('/login'), 2000); 
     } catch (err) {
-      setError(err.response?.data?.error || 'Registrasi gagal');
+      setError(err.response?.data?.error || 'Registration failed');
     }
   };
 
