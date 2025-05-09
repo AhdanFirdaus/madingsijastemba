@@ -4,7 +4,7 @@ import api from '../api/axios';
 import Input from '../components/Elements/Input';
 import BtnAuth from '../components/Elements/BtnAuth';
 import AuthLayout from '../components/Layouts/AuthLayout';
-import { FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import Notification from '../components/Elements/Notification';
 
 
 function Register() {
@@ -32,9 +32,9 @@ function Register() {
         password: trimmedPassword 
       });
       setSuccess(response.data.message);
-      setTimeout(() => navigate('/login'), 2000); // Redirect ke login setelah 2 detik
+      setTimeout(() => navigate('/login'), 2000); 
     } catch (err) {
-      setError(err.response?.data?.error || 'Registrasi gagal');
+      setError(err.response?.data?.error || 'Registration failed');
     }
   };
 
@@ -46,19 +46,8 @@ function Register() {
       bottomHref="/login"
     >
     
-    {error && (
-      <div className="flex items-center bg-rose-100 text-rose-700 p-4 rounded-lg mb-6 animate-fade-in">
-        <FiAlertCircle className="mr-2 text-xl" />
-          <span>{error}</span>
-      </div>
-    )}
-    
-    {success && (
-      <div className="flex items-center bg-green-100 text-green-700 p-4 rounded-lg mb-6 animate-fade-in">
-        <FiCheckCircle className="mr-2 text-xl" />
-        <span>{success}</span>
-      </div>
-    )}
+    <Notification message={error} type="error" />
+    <Notification message={success} type="success" />
 
     <form onSubmit={handleSubmit} className="space-y-6">
             <Input

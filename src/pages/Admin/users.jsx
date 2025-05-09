@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
-import { FiTrash2, FiAlertCircle, FiCheckCircle, FiLoader, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiTrash2, FiAlertCircle, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import Button from '../../components/Elements/Button';
 import Modal from '../../components/Elements/Modal';
+import Notification from '../../components/Elements/Notification';
 
 export default function Users() {
   const [users, setUsers] = useState([]);
@@ -30,7 +31,7 @@ export default function Users() {
         setUsers(response.data);
         setLoading(false);
       } catch (err) {
-        setError(err.response?.data?.error || 'Gagal memuat daftar pengguna');
+        setError(err.response?.data?.error || 'Failed to load user list');
         setLoading(false);
       }
     };
@@ -54,13 +55,13 @@ export default function Users() {
       const response = await api.post('/users', formData);
       if (response.data.success) {
         setUsers([...users, response.data.user]);
-        setSuccess('Pengguna berhasil dibuat');
+        setSuccess('User successfully created');
         setTimeout(() => setSuccess(''), 3000);
         setIsModalOpen(false);
         setFormData({ username: '', email: '', password: '', role: 'user' });
       }
     } catch (err) {
-      setFormError(err.response?.data?.error || 'Gagal membuat pengguna');
+      setFormError(err.response?.data?.error || 'Failed to create user');
     }
   };
 
@@ -74,11 +75,11 @@ export default function Users() {
         setUsers(users.map(user => 
           user.id === userId ? { ...user, role: newRole } : user
         ));
-        setSuccess('Peran pengguna berhasil diperbarui');
+        setSuccess('User role successfully updated');
         setTimeout(() => setSuccess(''), 3000);
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Gagal memperbarui peran');
+      setError(err.response?.data?.error || 'Failed to update role');
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -102,11 +103,11 @@ export default function Users() {
         if (currentPage > totalPages && totalPages > 0) {
           setCurrentPage(totalPages);
         }
-        setSuccess('Pengguna berhasil dihapus');
+        setSuccess('User successfully deleted');
         setTimeout(() => setSuccess(''), 3000);
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Gagal menghapus pengguna');
+      setError(err.response?.data?.error || 'Failed to delete user');
       setTimeout(() => setError(''), 3000);
     } finally {
       setIsConfirmModalOpen(false);
@@ -146,33 +147,17 @@ export default function Users() {
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">User Managements</h2>
+          <h2 className="text-2xl font-bold">User Management</h2>
           <Button onClick={() => setIsModalOpen(true)}>Create User</Button>
         </div>
 
-        {error && (
-          <div className="flex items-center bg-rose-100 text-rose-700 p-4 rounded-lg mb-6 animate-fade-in">
-            <FiAlertCircle className="mr-2 text-xl" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="flex items-center bg-green-100 text-green-700 p-4 rounded-lg mb-6 animate-fade-in">
-            <FiCheckCircle className="mr-2 text-xl" />
-            <span>{success}</span>
-          </div>
-        )}
-
-        {loading && (
-          <div className="flex justify-center items-center py-12">
-            <FiLoader className="animate-spin text-rose-500 text-4xl" />
-          </div>
-        )}
+        <Notification message={error} type="error" />
+        <Notification message={success} type="success" />
+        <Notification loading={loading} />
 
         {!loading && users.length === 0 && (
           <div className="text-center text-gray-600 py-12">
-            Tidak ada pengguna ditemukan
+            No users found
           </div>
         )}
 
@@ -186,7 +171,6 @@ export default function Users() {
           }}
           title="Create New User"
         >
-
           <form onSubmit={handleCreateUser}>
             {formError && (
               <div className="flex items-center bg-rose-100 text-rose-700 p-3 rounded-md mb-4">
@@ -261,10 +245,10 @@ export default function Users() {
             setIsConfirmModalOpen(false);
             setUserToDelete(null);
           }}
-          title="Konfirmasi Hapus Pengguna"
+          title="Confirm Delete User"
         >
           <div className="mb-4">
-            Apakah Anda yakin ingin menghapus pengguna{' '}
+            Are you sure you want to delete user{' '}
             <strong>{userToDelete?.username}</strong>?
           </div>
           <div className="flex justify-end space-x-2">
@@ -331,7 +315,7 @@ export default function Users() {
                       <button
                         onClick={() => confirmDelete(user)}
                         className="text-rose-500 hover:text-rose-700 transition-colors cursor-pointer"
-                        title="Hapus pengguna"
+                        title="Delete user"
                       >
                         <FiTrash2 size={20} />
                       </button>
