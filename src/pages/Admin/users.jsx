@@ -231,12 +231,12 @@ export default function Users() {
             </div>
             <div className="flex justify-end space-x-2">
               <Button
-                color="gray"
+                color="rose"
                 onClick={() => setIsModalOpen(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" color="rose">
+              <Button type="submit" color="green">
                 Create
               </Button>
             </div>
