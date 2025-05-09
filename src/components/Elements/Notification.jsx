@@ -1,6 +1,16 @@
-import { FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import { FiAlertCircle, FiCheckCircle, FiLoader } from 'react-icons/fi';
 
-const Notification = ({ message, type }) => {
+const Notification = ({ message, type, loading }) => {
+  // If loading is active and there are no messages, show a loading spinner.
+  if (loading && !message) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <FiLoader className="animate-spin text-rose-500 text-4xl" />
+      </div>
+    );
+  }
+
+  // If there is no message, nothing will be displayed.
   if (!message) return null;
 
   const isError = type === 'error';
