@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import api from "../../api/axios";
 import Button from "../../components/Elements/Button";
 import Modal from "../../components/Elements/Modal";
@@ -8,7 +8,7 @@ import ReactQuill from "react-quill-new";
 import "react-quill/dist/quill.snow.css";
 import DOMPurify from "dompurify";
 import debounce from "lodash/debounce";
-import { FiEdit, FiTrash2 } from "react-icons/fi";
+import { FiEdit, FiTrash2, FiMessageSquare } from "react-icons/fi";
 
 const API_BASE_URL = "http://localhost/madingsijastemba/api";
 
@@ -35,16 +35,22 @@ const quillFormats = [
 export default function Articles() {
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [comments, setComments] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isCategoryConfirmModalOpen, setIsCategoryConfirmModalOpen] = useState(false);
+  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [isCommentConfirmModalOpen, setIsCommentConfirmModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isCategoryEditMode, setIsCategoryEditMode] = useState(false);
+  const [isCommentEditMode, setIsCommentEditMode] = useState(false);
   const [currentArticle, setCurrentArticle] = useState(null);
   const [currentCategory, setCurrentCategory] = useState(null);
+  const [currentComment, setCurrentComment] = useState(null);
   const [articleToDelete, setArticleToDelete] = useState(null);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [commentToDelete, setCommentToDelete] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -52,11 +58,14 @@ export default function Articles() {
     image: null,
   });
   const [categoryFormData, setCategoryFormData] = useState({ name: "" });
+  const [commentFormData, setCommentFormData] = useState({ content: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [token] = useState(localStorage.getItem("token"));
+  const [userRole] = useState(localStorage.getItem("role") || "user"); // Assume role is stored in localStorage
   const formRef = useRef(null);
   const categoryFormRef = useRef(null);
+  const commentFormRef = useRef(null);
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -111,6 +120,11 @@ export default function Articles() {
   const handleCategoryInputChange = (e) => {
     const { name, value } = e.target;
     setCategoryFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCommentInputChange = (e) => {
+    const { name, value } = e.target;
+    setCommentFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const debouncedHandleContentChange = useCallback(
@@ -218,6 +232,26 @@ export default function Articles() {
     }
   };
 
+  const fetchCommentsAndUpdateState = async (articleId) => {
+    if (!token) {
+      setError("Token not found. Please log in.");
+      setComments([]);
+      return;
+    }
+
+    try {
+      const response = await api.get(`/comments?article_id=${articleId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setComments(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      setComments([]);
+      setError(
+        err.response?.data?.error || "Failed to load comments. Please try again."
+      );
+    }
+  };
+
   const handleDelete = (article) => {
     setArticleToDelete(article);
     setIsConfirmModalOpen(true);
@@ -286,6 +320,12 @@ export default function Articles() {
     setIsCategoryEditMode(false);
   };
 
+  const resetCommentForm = () => {
+    setCommentFormData({ content: "" });
+    setCurrentComment(null);
+    setIsCommentEditMode(false);
+  };
+
   const openCategoryModal = () => {
     resetCategoryForm();
     setIsCategoryModalOpen(true);
@@ -296,6 +336,20 @@ export default function Articles() {
     setCurrentCategory(category);
     setCategoryFormData({ name: category.name || "" });
     setIsCategoryModalOpen(true);
+  };
+
+  const openCommentModal = (article) => {
+    setCurrentArticle(article);
+    resetCommentForm();
+    fetchCommentsAndUpdateState(article.id);
+    setIsCommentModalOpen(true);
+  };
+
+  const openEditCommentModal = (comment) => {
+    setIsCommentEditMode(true);
+    setCurrentComment(comment);
+    setCommentFormData({ content: comment.content || "" });
+    setIsCommentModalOpen(true);
   };
 
   const handleCategorySubmit = async (e) => {
@@ -389,6 +443,100 @@ export default function Articles() {
     }
   };
 
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!token) {
+      setError("Token not found. Please log in.");
+      return;
+    }
+
+    if (!commentFormData.content) {
+      setError("Comment content is required.");
+      return;
+    }
+
+    try {
+      let response;
+      if (isCommentEditMode && currentComment?.id) {
+        response = await api.put(
+          "/comments",
+          { id: currentComment.id, content: commentFormData.content },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+      } else {
+        response = await api.post(
+          "/comments",
+          {
+            article_id: currentArticle.id,
+            content: commentFormData.content,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+      }
+
+      if (response.data.success || response.data.message) {
+        await fetchCommentsAndUpdateState(currentArticle.id);
+        setIsCommentModalOpen(false);
+        resetCommentForm();
+        setSuccess(
+          `Comment ${isCommentEditMode ? "updated" : "created"} successfully!`
+        );
+      } else {
+        setError(
+          response.data.error ||
+            `Failed to ${isCommentEditMode ? "update" : "create"} comment.`
+        );
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.error ||
+          `Failed to ${isCommentEditMode ? "update" : "create"} comment.`
+      );
+      console.error("handleCommentSubmit Error:", err);
+    }
+  };
+
+  const handleCommentDelete = (comment) => {
+    setCommentToDelete(comment);
+    setIsCommentConfirmModalOpen(true);
+  };
+
+  const executeCommentDelete = async () => {
+    if (!token) {
+      setError("Token not found. Please log in.");
+      setIsCommentConfirmModalOpen(false);
+      setCommentToDelete(null);
+      return;
+    }
+
+    try {
+      const response = await api.delete("/comments", {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { id: commentToDelete.id },
+      });
+
+      if (response.data.success || response.data.message) {
+        setComments(
+          comments.filter((comment) => comment.id !== commentToDelete.id)
+        );
+        setIsCommentConfirmModalOpen(false);
+        setCommentToDelete(null);
+        setSuccess("Comment deleted successfully!");
+      } else {
+        setError(response.data.error || "Failed to delete comment.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to delete comment.");
+    }
+  };
+
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
     return `${API_BASE_URL}/${imagePath}`;
@@ -414,6 +562,12 @@ export default function Articles() {
     }
   };
 
+  const handleCommentSubmitTrigger = () => {
+    if (commentFormRef.current) {
+      commentFormRef.current.requestSubmit();
+    }
+  };
+
   return (
     <div className="container mx-auto">
       <div className="flex justify-center sm:justify-between flex-col sm:flex-row items-center mb-6 space-y-2 sm:space-y-0 sm:space-x-2">
@@ -421,13 +575,13 @@ export default function Articles() {
         <div className="space-x-2 sm:flex flex gap-2">
           <Button
             onClick={openCategoryModal}
-            className="bg-green-500 text-white hover:bg-green-600"
+            color="green"
           >
             Manage Categories
           </Button>
           <Button
             onClick={openCreateModal}
-            className="bg-blue-500 text-white hover:bg-blue-600"
+            color="blue"
           >
             Create Article
           </Button>
@@ -472,16 +626,23 @@ export default function Articles() {
               </p>
               <div className="flex justify-end space-x-2 mt-auto">
                 <Button
+                  color="blue"
+                  onClick={() => openCommentModal(article)}
+                  className="p-2 text-white"
+                >
+                  <FiMessageSquare />
+                </Button>
+                <Button
                   color="green"
                   onClick={() => openEditModal(article)}
-                  className="p-2 bg-green-500 text-white hover:bg-green-600"
+                  className="p-2 text-white"
                 >
                   <FiEdit />
                 </Button>
                 <Button
                   color="rose"
                   onClick={() => handleDelete(article)}
-                  className="p-2 bg-rose-500 text-white hover:bg-rose-600"
+                  className="p-2 text-white"
                 >
                   <FiTrash2 />
                 </Button>
@@ -508,7 +669,7 @@ export default function Articles() {
             </Button>
             <Button
               type="button"
-              className="bg-blue-500 text-white hover:bg-blue-600"
+              color="blue"
               onClick={handleSubmitTrigger}
             >
               {isEditMode ? "Update Article" : "Create Article"}
@@ -646,7 +807,7 @@ export default function Articles() {
             </Button>
             <Button
               type="button"
-              className="bg-blue-500 text-white hover:bg-blue-600"
+              color="blue"
               onClick={handleCategorySubmitTrigger}
             >
               {isCategoryEditMode ? "Update Category" : "Create Category"}
@@ -685,14 +846,14 @@ export default function Articles() {
                     <Button
                       color="green"
                       onClick={() => openEditCategoryModal(category)}
-                      className="p-1 bg-green-500 text-white hover:bg-green-600"
+                      className="p-1"
                     >
                       <FiEdit />
                     </Button>
                     <Button
                       color="rose"
                       onClick={() => handleCategoryDelete(category)}
-                      className="p-1 bg-rose-500 text-white hover:bg-rose-600"
+                      className="p-1"
                     >
                       <FiTrash2 />
                     </Button>
@@ -727,6 +888,138 @@ export default function Articles() {
             Cancel
           </Button>
           <Button color="rose" onClick={executeCategoryDelete}>
+            Confirm Delete
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isCommentModalOpen}
+        onClose={() => {
+          setIsCommentModalOpen(false);
+          setCurrentArticle(null);
+          resetCommentForm();
+        }}
+        title={`Manage Comments for "${currentArticle?.title || "Article"}"`}
+        className="max-w-2xl w-full"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button
+              type="button"
+              color="rose"
+              onClick={() => {
+                setIsCommentModalOpen(false);
+                setCurrentArticle(null);
+                resetCommentForm();
+              }}
+            >
+              Close
+            </Button>
+            {!isCommentEditMode && (
+              <Button
+                type="button"
+                color="green"
+                onClick={handleCommentSubmitTrigger}
+              >
+                Add Comment
+              </Button>
+            )}
+            {isCommentEditMode && (
+              <Button
+                type="button"
+                color="green"
+                onClick={handleCommentSubmitTrigger}
+              >
+                Update Comment
+              </Button>
+            )}
+          </div>
+        }
+      >
+        <form
+          ref={commentFormRef}
+          onSubmit={handleCommentSubmit}
+          className="space-y-4 mb-6"
+        >
+          <Input
+            label="Comment Content"
+            id="content"
+            name="content"
+            value={commentFormData.content}
+            onChange={handleCommentInputChange}
+            placeholder="Enter your comment"
+            required
+          />
+        </form>
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold mb-2">Existing Comments</h3>
+          {comments.length === 0 ? (
+            <p className="text-gray-600">No comments available.</p>
+          ) : (
+            <ul className="space-y-2 max-h-60 overflow-y-auto">
+              {comments.map((comment) => (
+                <li
+                  key={comment.id}
+                  className="flex justify-between items-center p-2 bg-gray-100 rounded-md"
+                >
+                  <div>
+                    <p className="text-gray-600">{comment.content}</p>
+                    <p className="text-sm text-gray-500">
+                      By: {comment.username} |{" "}
+                      {new Date(comment.created_at).toLocaleString()}
+                      {comment.updated_at && (
+                        <span> | Updated: {new Date(comment.updated_at).toLocaleString()}</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      color="green"
+                      onClick={() => openEditCommentModal(comment)}
+                      className="p-1"
+                      disabled={userRole !== "admin" && comment.user_id !== JSON.parse(localStorage.getItem("userData") || "{}").user_id}
+                    >
+                      <FiEdit />
+                    </Button>
+                    <Button
+                      color="rose"
+                      onClick={() => handleCommentDelete(comment)}
+                      className="p-1"
+                      disabled={userRole !== "admin" && comment.user_id !== JSON.parse(localStorage.getItem("userData") || "{}").user_id}
+                    >
+                      <FiTrash2 />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isCommentConfirmModalOpen}
+        onClose={() => {
+          setIsCommentConfirmModalOpen(false);
+          setCommentToDelete(null);
+        }}
+        title="Confirm Delete Comment"
+      >
+        <div className="mb-4">
+          Are you sure you want to delete this comment by{' '}
+          <strong>{commentToDelete?.username}</strong>?
+        </div>
+        <div className="flex justify-end space-x-2">
+          <Button
+            color="gray"
+            onClick={() => {
+              setIsCommentConfirmModalOpen(false);
+              setCommentToDelete(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button color="rose" onClick={executeCommentDelete}>
             Confirm Delete
           </Button>
         </div>
