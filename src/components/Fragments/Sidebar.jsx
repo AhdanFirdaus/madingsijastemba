@@ -8,7 +8,6 @@ function Sidebar({ isOpen, toggleSidebar }) {
   const navItems = [
     { name: 'Statistic', path: '/admin/statistic', icon: <FiBarChart2 className="w-5 h-5" /> },
     { name: 'Articles', path: '/admin/articles', icon: <FiFileText className="w-5 h-5" /> },
-    { name: 'Comments', path: '/admin/comments', icon: <FiMessageSquare className="w-5 h-5" /> },
     { name: 'Users', path: '/admin/users', icon: <FiUsers className="w-5 h-5" /> },
   ];
 
