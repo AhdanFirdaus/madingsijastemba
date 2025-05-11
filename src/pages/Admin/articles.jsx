@@ -582,7 +582,7 @@ export default function Articles() {
               type="text"
               placeholder="Search articles..."
               onChange={handleSearchChange}
-              className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+              className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm"
             />
             <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
@@ -602,7 +602,7 @@ export default function Articles() {
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin text-green-500"><FiLoader size={40} /></div>
+          <div className="animate-spin text-rose-500"><FiLoader size={40} /></div>
         </div>
       ) : articles.length === 0 ? (
         <p className="text-gray-600 text-center">
