@@ -581,7 +581,7 @@ export default function Articles() {
           </Button>
           <Button
             onClick={openCreateModal}
-            color="blue"
+            color="green"
           >
             Create Article
           </Button>
@@ -669,7 +669,7 @@ export default function Articles() {
             </Button>
             <Button
               type="button"
-              color="blue"
+              color="green"
               onClick={handleSubmitTrigger}
             >
               {isEditMode ? "Update Article" : "Create Article"}
@@ -807,7 +807,7 @@ export default function Articles() {
             </Button>
             <Button
               type="button"
-              color="blue"
+              color="green"
               onClick={handleCategorySubmitTrigger}
             >
               {isCategoryEditMode ? "Update Category" : "Create Category"}
