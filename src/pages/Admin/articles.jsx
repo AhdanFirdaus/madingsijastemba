@@ -8,7 +8,8 @@ import ReactQuill from "react-quill-new";
 import "react-quill/dist/quill.snow.css";
 import DOMPurify from "dompurify";
 import debounce from "lodash/debounce";
-import { FiEdit, FiTrash2, FiMessageSquare } from "react-icons/fi";
+import { FiEdit, FiTrash2, FiSearch, FiLoader } from "react-icons/fi";
+import ArticleCard from "../../components/Elements/ArticleCard";
 
 const API_BASE_URL = "http://localhost/madingsijastemba/api";
 
@@ -59,51 +60,22 @@ export default function Articles() {
   });
   const [categoryFormData, setCategoryFormData] = useState({ name: "" });
   const [commentFormData, setCommentFormData] = useState({ content: "" });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [token] = useState(localStorage.getItem("token"));
-  const [userRole] = useState(localStorage.getItem("role") || "user"); // Assume role is stored in localStorage
+  const [userRole] = useState(localStorage.getItem("role") || "user");
   const formRef = useRef(null);
   const categoryFormRef = useRef(null);
   const commentFormRef = useRef(null);
 
+  const MINIMUM_LOADING_TIME = 500; 
+
   useEffect(() => {
-    const fetchArticles = async () => {
-      if (!token) {
-        setError("Token not found. Please log in.");
-        setArticles([]);
-        return;
-      }
-
-      try {
-        const response = await api.get("/articles", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setArticles(Array.isArray(response.data) ? response.data : []);
-      } catch (err) {
-        setArticles([]);
-        setError(
-          err.response?.data?.error || "Failed to load articles. Please try again."
-        );
-      }
-    };
-
-    const fetchCategories = async () => {
-      try {
-        const response = await api.get("/categories", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setCategories(Array.isArray(response.data) ? response.data : []);
-      } catch (err) {
-        setError(
-          err.response?.data?.error || "Failed to load categories. Please try again."
-        );
-      }
-    };
-
     fetchArticles();
     fetchCategories();
-  }, [token]);
+  }, [token, searchQuery]);
 
   useEffect(() => {
     if (success) {
@@ -111,6 +83,65 @@ export default function Articles() {
       return () => clearTimeout(timer);
     }
   }, [success]);
+
+  const fetchArticles = async () => {
+    if (!token) {
+      setError("Token not found. Please log in.");
+      setArticles([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    const startTime = Date.now();
+
+    try {
+      const url = searchQuery ? `/articles?search=${encodeURIComponent(searchQuery)}` : "/articles";
+      const response = await api.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = MINIMUM_LOADING_TIME - elapsedTime;
+
+      if (remainingTime > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      }
+
+      setArticles(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      setArticles([]);
+      setError(
+        err.response?.data?.error || "Failed to load articles. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const response = await api.get("/categories", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCategories(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      setError(
+        err.response?.data?.error || "Failed to load categories. Please try again."
+      );
+    }
+  };
+
+  const debouncedSearch = useCallback(
+    debounce((value) => {
+      setSearchQuery(value);
+    }, 500),
+    []
+  );
+
+  const handleSearchChange = (e) => {
+    debouncedSearch(e.target.value);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -190,7 +221,7 @@ export default function Articles() {
       }
 
       if (response.data.success) {
-        await fetchArticlesAndUpdateState();
+        await fetchArticles();
         setIsModalOpen(false);
         resetForm();
         setSuccess(
@@ -202,33 +233,6 @@ export default function Articles() {
     } catch (err) {
       setError(err.response?.data?.error || `Failed to ${isEditMode ? "update" : "save"} article.`);
       console.error("handleSubmit Error:", err);
-    }
-  };
-
-  const fetchArticlesAndUpdateState = async () => {
-    try {
-      const response = await api.get("/articles", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setArticles(Array.isArray(response.data) ? response.data : []);
-    } catch (err) {
-      setArticles([]);
-      setError(
-        err.response?.data?.error || "Failed to load articles. Please try again."
-      );
-    }
-  };
-
-  const fetchCategoriesAndUpdateState = async () => {
-    try {
-      const response = await api.get("/categories", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setCategories(Array.isArray(response.data) ? response.data : []);
-    } catch (err) {
-      setError(
-        err.response?.data?.error || "Failed to load categories. Please try again."
-      );
     }
   };
 
@@ -388,7 +392,7 @@ export default function Articles() {
       }
 
       if (response.data.message) {
-        await fetchCategoriesAndUpdateState();
+        await fetchCategories();
         setIsCategoryModalOpen(false);
         resetCategoryForm();
         setSuccess(
@@ -569,85 +573,53 @@ export default function Articles() {
   };
 
   return (
-    <div className="container mx-auto">
-      <div className="flex justify-center sm:justify-between flex-col sm:flex-row items-center mb-6 space-y-2 sm:space-y-0 sm:space-x-2">
+    <div className="container mx-auto px-4">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
         <h2 className="text-2xl font-bold">Articles</h2>
-        <div className="space-x-2 sm:flex flex gap-2">
-          <Button
-            onClick={openCategoryModal}
-            color="green"
-          >
-            Manage Categories
-          </Button>
-          <Button
-            onClick={openCreateModal}
-            color="green"
-          >
-            Create Article
-          </Button>
+        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              placeholder="Search articles..."
+              onChange={handleSearchChange}
+              className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+            />
+            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          </div>
+          <div className="flex space-x-2">
+            <Button onClick={openCategoryModal} color="green">
+              Manage Categories
+            </Button>
+            <Button onClick={openCreateModal} color="green">
+              Create Article
+            </Button>
+          </div>
         </div>
       </div>
 
       <Notification message={error} type="error" />
       <Notification message={success} type="success" />
 
-      {articles.length === 0 ? (
-        <p className="text-gray-600">No articles available.</p>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin text-green-500"><FiLoader size={40} /></div>
+        </div>
+      ) : articles.length === 0 ? (
+        <p className="text-gray-600 text-center">
+          {searchQuery ? "No articles found for your search." : "No articles available."}
+        </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {articles.map((article) => (
-            <div
+            <ArticleCard
               key={article.id}
-              className="bg-white rounded-lg shadow-md p-6 flex flex-col"
-            >
-              {article.image && (
-                <img
-                  src={getImageUrl(article.image)}
-                  alt={article.title}
-                  className="w-full h-48 object-cover rounded-md mb-4"
-                  onError={(e) => {
-                    e.target.src = "https://via.placeholder.com/150";
-                    console.error(`Failed to load image: ${article.image}`);
-                  }}
-                />
-              )}
-              <h2 className="text-xl font-semibold mb-2">{article.title}</h2>
-              <div
-                className="text-gray-600 mb-4 line-clamp-3"
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(truncateHTML(article.content, 100)),
-                }}
-              />
-              <p className="text-sm text-gray-500 mb-2">
-                Category: {article.category_name || "No category"}
-              </p>
-              <p className="text-sm text-gray-500 mb-4">
-                Author: {article.username}
-              </p>
-              <div className="flex justify-end space-x-2 mt-auto">
-                <Button
-                  color="blue"
-                  onClick={() => openCommentModal(article)}
-                  className="p-2 text-white"
-                >
-                  <FiMessageSquare />
-                </Button>
-                <Button
-                  color="green"
-                  onClick={() => openEditModal(article)}
-                  className="p-2 text-white"
-                >
-                  <FiEdit />
-                </Button>
-                <Button
-                  color="rose"
-                  onClick={() => handleDelete(article)}
-                  className="p-2 text-white"
-                >
-                  <FiTrash2 />
-                </Button>
-              </div>
-            </div>
+              article={article}
+              onCommentClick={openCommentModal}
+              onEditClick={openEditModal}
+              onDeleteClick={handleDelete}
+              getImageUrl={getImageUrl}
+              truncateHTML={truncateHTML}
+            />
           ))}
         </div>
       )}
@@ -966,7 +938,7 @@ export default function Articles() {
                     <p className="text-gray-600">{comment.content}</p>
                     <p className="text-sm text-gray-500">
                       By: {comment.username} |{" "}
-                      {new Date(comment.created_at).toLocaleString()}
+                      { Instant.now().toString() }
                       {comment.updated_at && (
                         <span> | Updated: {new Date(comment.updated_at).toLocaleString()}</span>
                       )}
