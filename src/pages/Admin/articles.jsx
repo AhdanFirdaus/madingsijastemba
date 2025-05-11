@@ -12,7 +12,6 @@ import { FiEdit, FiTrash2 } from "react-icons/fi";
 
 const API_BASE_URL = "http://localhost/madingsijastemba/api";
 
-// Quill toolbar configuration
 const quillModules = {
   toolbar: [
     [{ header: [1, 2, 3, false] }],
@@ -38,19 +37,26 @@ export default function Articles() {
   const [categories, setCategories] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isCategoryConfirmModalOpen, setIsCategoryConfirmModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isCategoryEditMode, setIsCategoryEditMode] = useState(false);
   const [currentArticle, setCurrentArticle] = useState(null);
+  const [currentCategory, setCurrentCategory] = useState(null);
   const [articleToDelete, setArticleToDelete] = useState(null);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
     category_id: "",
     image: null,
   });
+  const [categoryFormData, setCategoryFormData] = useState({ name: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [token] = useState(localStorage.getItem("token"));
   const formRef = useRef(null);
+  const categoryFormRef = useRef(null);
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -100,6 +106,11 @@ export default function Articles() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCategoryInputChange = (e) => {
+    const { name, value } = e.target;
+    setCategoryFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const debouncedHandleContentChange = useCallback(
@@ -194,6 +205,19 @@ export default function Articles() {
     }
   };
 
+  const fetchCategoriesAndUpdateState = async () => {
+    try {
+      const response = await api.get("/categories", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCategories(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      setError(
+        err.response?.data?.error || "Failed to load categories. Please try again."
+      );
+    }
+  };
+
   const handleDelete = (article) => {
     setArticleToDelete(article);
     setIsConfirmModalOpen(true);
@@ -256,6 +280,115 @@ export default function Articles() {
     setCurrentArticle(null);
   };
 
+  const resetCategoryForm = () => {
+    setCategoryFormData({ name: "" });
+    setCurrentCategory(null);
+    setIsCategoryEditMode(false);
+  };
+
+  const openCategoryModal = () => {
+    resetCategoryForm();
+    setIsCategoryModalOpen(true);
+  };
+
+  const openEditCategoryModal = (category) => {
+    setIsCategoryEditMode(true);
+    setCurrentCategory(category);
+    setCategoryFormData({ name: category.name || "" });
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!token) {
+      setError("Token not found. Please log in.");
+      return;
+    }
+
+    if (!categoryFormData.name) {
+      setError("Category name is required.");
+      return;
+    }
+
+    try {
+      let response;
+      if (isCategoryEditMode && currentCategory?.id) {
+        response = await api.put(
+          "/categories",
+          { id: currentCategory.id, name: categoryFormData.name },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+      } else {
+        response = await api.post(
+          "/categories",
+          { name: categoryFormData.name },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+      }
+
+      if (response.data.message) {
+        await fetchCategoriesAndUpdateState();
+        setIsCategoryModalOpen(false);
+        resetCategoryForm();
+        setSuccess(
+          `Category ${isCategoryEditMode ? "updated" : "created"} successfully!`
+        );
+      } else {
+        setError(
+          response.data.error ||
+            `Failed to ${isCategoryEditMode ? "update" : "create"} category.`
+        );
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.error ||
+          `Failed to ${isCategoryEditMode ? "update" : "create"} category.`
+      );
+      console.error("handleCategorySubmit Error:", err);
+    }
+  };
+
+  const handleCategoryDelete = (category) => {
+    setCategoryToDelete(category);
+    setIsCategoryConfirmModalOpen(true);
+  };
+
+  const executeCategoryDelete = async () => {
+    if (!token) {
+      setError("Token not found. Please log in.");
+      setIsCategoryConfirmModalOpen(false);
+      setCategoryToDelete(null);
+      return;
+    }
+
+    try {
+      const response = await api.delete("/categories", {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { id: categoryToDelete.id },
+      });
+
+      if (response.data.message) {
+        setCategories(
+          categories.filter((category) => category.id !== categoryToDelete.id)
+        );
+        setIsCategoryConfirmModalOpen(false);
+        setCategoryToDelete(null);
+        setSuccess("Category deleted successfully!");
+      } else {
+        setError(response.data.error || "Failed to delete category.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to delete category.");
+    }
+  };
+
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
     return `${API_BASE_URL}/${imagePath}`;
@@ -275,16 +408,30 @@ export default function Articles() {
     }
   };
 
+  const handleCategorySubmitTrigger = () => {
+    if (categoryFormRef.current) {
+      categoryFormRef.current.requestSubmit();
+    }
+  };
+
   return (
     <div className="container mx-auto">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-center sm:justify-between flex-col sm:flex-row items-center mb-6 space-y-2 sm:space-y-0 sm:space-x-2">
         <h2 className="text-2xl font-bold">Articles</h2>
-        <Button
-          onClick={openCreateModal}
-          className="bg-blue-500 text-white hover:bg-blue-600"
-        >
-          Create Article
-        </Button>
+        <div className="space-x-2 sm:flex flex gap-2">
+          <Button
+            onClick={openCategoryModal}
+            className="bg-green-500 text-white hover:bg-green-600"
+          >
+            Manage Categories
+          </Button>
+          <Button
+            onClick={openCreateModal}
+            className="bg-blue-500 text-white hover:bg-blue-600"
+          >
+            Create Article
+          </Button>
+        </div>
       </div>
 
       <Notification message={error} type="error" />
@@ -313,7 +460,9 @@ export default function Articles() {
               <h2 className="text-xl font-semibold mb-2">{article.title}</h2>
               <div
                 className="text-gray-600 mb-4 line-clamp-3"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(truncateHTML(article.content, 100)) }}
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(truncateHTML(article.content, 100)),
+                }}
               />
               <p className="text-sm text-gray-500 mb-2">
                 Category: {article.category_name || "No category"}
@@ -469,10 +618,115 @@ export default function Articles() {
           >
             Cancel
           </Button>
+          <Button color="rose" onClick={executeDelete}>
+            Confirm Delete
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isCategoryModalOpen}
+        onClose={() => {
+          setIsCategoryModalOpen(false);
+          resetCategoryForm();
+        }}
+        title={isCategoryEditMode ? "Edit Category" : "Create Category"}
+        className="max-w-md w-full"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button
+              type="button"
+              color="rose"
+              onClick={() => {
+                setIsCategoryModalOpen(false);
+                resetCategoryForm();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-blue-500 text-white hover:bg-blue-600"
+              onClick={handleCategorySubmitTrigger}
+            >
+              {isCategoryEditMode ? "Update Category" : "Create Category"}
+            </Button>
+          </div>
+        }
+      >
+        <form
+          ref={categoryFormRef}
+          onSubmit={handleCategorySubmit}
+          className="space-y-4"
+        >
+          <Input
+            label="Category Name"
+            id="name"
+            name="name"
+            value={categoryFormData.name}
+            onChange={handleCategoryInputChange}
+            placeholder="Enter category name"
+            required
+          />
+        </form>
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold mb-2">Existing Categories</h3>
+          {categories.length === 0 ? (
+            <p className="text-gray-600">No categories available.</p>
+          ) : (
+            <ul className="space-y-2 max-h-60 overflow-y-auto">
+              {categories.map((category) => (
+                <li
+                  key={category.id}
+                  className="flex justify-between items-center p-2 bg-gray-100 rounded-md"
+                >
+                  <span>{category.name}</span>
+                  <div className="flex space-x-2">
+                    <Button
+                      color="green"
+                      onClick={() => openEditCategoryModal(category)}
+                      className="p-1 bg-green-500 text-white hover:bg-green-600"
+                    >
+                      <FiEdit />
+                    </Button>
+                    <Button
+                      color="rose"
+                      onClick={() => handleCategoryDelete(category)}
+                      className="p-1 bg-rose-500 text-white hover:bg-rose-600"
+                    >
+                      <FiTrash2 />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isCategoryConfirmModalOpen}
+        onClose={() => {
+          setIsCategoryConfirmModalOpen(false);
+          setCategoryToDelete(null);
+        }}
+        title="Confirm Delete Category"
+      >
+        <div className="mb-4">
+          Are you sure you want to delete category{' '}
+          <strong>{categoryToDelete?.name}</strong>?
+        </div>
+        <div className="flex justify-end space-x-2">
           <Button
-            color="rose"
-            onClick={executeDelete}
+            color="gray"
+            onClick={() => {
+              setIsCategoryConfirmModalOpen(false);
+              setCategoryToDelete(null);
+            }}
           >
+            Cancel
+          </Button>
+          <Button color="rose" onClick={executeCategoryDelete}>
             Confirm Delete
           </Button>
         </div>
