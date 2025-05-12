@@ -6,9 +6,8 @@ import ErrorPage from './Pages/404';
 import Register from './Pages/register';
 import Login from './Pages/login';
 import Admin from './Pages/Admin/admin';
-// import Statistic from './Pages/Admin/statistic';
+import Statistic from './Pages/Admin/statistic';
 import Articles from './Pages/Admin/articles';
-import Comments from './Pages/Admin/comments';
 import Users from './Pages/Admin/users';
 
 
@@ -59,17 +58,17 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      // {
-      //   path: 'statistic',
-      //   element: <ProtectedRoute><Statistic /></ProtectedRoute>,
-      // },
+      {
+        index: true,
+        element: <Navigate to="statistic" replace />,
+      },
+      {
+        path: 'statistic',
+        element: <ProtectedRoute><Statistic /></ProtectedRoute>,
+      },
       {
         path: 'articles',
         element: <ProtectedRoute><Articles /></ProtectedRoute>,
-      },
-      {
-        path: 'comments',
-        element: <ProtectedRoute><Comments /></ProtectedRoute>,
       },
       {
         path: 'users',

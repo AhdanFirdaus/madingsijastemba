@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import api from "../../api/axios";
 import Button from "../../components/Elements/Button";
 import Modal from "../../components/Elements/Modal";
@@ -8,7 +8,9 @@ import ReactQuill from "react-quill-new";
 import "react-quill/dist/quill.snow.css";
 import DOMPurify from "dompurify";
 import debounce from "lodash/debounce";
-import { FiEdit, FiTrash2 } from "react-icons/fi";
+import { FiSearch, FiLoader, FiEdit, FiTrash2 } from "react-icons/fi";
+import ArticleCard from "../../components/Elements/ArticleCard";
+import ArticleActions from "../../components/Elements/ArticleActions";
 
 const API_BASE_URL = "http://localhost/madingsijastemba/api";
 
@@ -35,16 +37,22 @@ const quillFormats = [
 export default function Articles() {
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [comments, setComments] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isCategoryConfirmModalOpen, setIsCategoryConfirmModalOpen] = useState(false);
+  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [isCommentConfirmModalOpen, setIsCommentConfirmModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isCategoryEditMode, setIsCategoryEditMode] = useState(false);
+  const [isCommentEditMode, setIsCommentEditMode] = useState(false);
   const [currentArticle, setCurrentArticle] = useState(null);
   const [currentCategory, setCurrentCategory] = useState(null);
+  const [currentComment, setCurrentComment] = useState(null);
   const [articleToDelete, setArticleToDelete] = useState(null);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [commentToDelete, setCommentToDelete] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -52,49 +60,25 @@ export default function Articles() {
     image: null,
   });
   const [categoryFormData, setCategoryFormData] = useState({ name: "" });
+  const [commentFormData, setCommentFormData] = useState({ content: "" });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [token] = useState(localStorage.getItem("token"));
+  const [userRole] = useState(
+    JSON.parse(localStorage.getItem("user") || "{}").role || "user"
+  );
   const formRef = useRef(null);
   const categoryFormRef = useRef(null);
+  const commentFormRef = useRef(null);
+
+  const MINIMUM_LOADING_TIME = 500;
 
   useEffect(() => {
-    const fetchArticles = async () => {
-      if (!token) {
-        setError("Token not found. Please log in.");
-        setArticles([]);
-        return;
-      }
-
-      try {
-        const response = await api.get("/articles", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setArticles(Array.isArray(response.data) ? response.data : []);
-      } catch (err) {
-        setArticles([]);
-        setError(
-          err.response?.data?.error || "Failed to load articles. Please try again."
-        );
-      }
-    };
-
-    const fetchCategories = async () => {
-      try {
-        const response = await api.get("/categories", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setCategories(Array.isArray(response.data) ? response.data : []);
-      } catch (err) {
-        setError(
-          err.response?.data?.error || "Failed to load categories. Please try again."
-        );
-      }
-    };
-
     fetchArticles();
     fetchCategories();
-  }, [token]);
+  }, [token, searchQuery]);
 
   useEffect(() => {
     if (success) {
@@ -102,6 +86,65 @@ export default function Articles() {
       return () => clearTimeout(timer);
     }
   }, [success]);
+
+  const fetchArticles = async () => {
+    if (!token) {
+      setError("Token not found. Please log in.");
+      setArticles([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    const startTime = Date.now();
+
+    try {
+      const url = searchQuery ? `/articles?search=${encodeURIComponent(searchQuery)}` : "/articles";
+      const response = await api.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = MINIMUM_LOADING_TIME - elapsedTime;
+
+      if (remainingTime > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remainingTime));
+      }
+
+      setArticles(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      setArticles([]);
+      setError(
+        err.response?.data?.error || "Failed to load articles. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const response = await api.get("/categories", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCategories(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      setError(
+        err.response?.data?.error || "Failed to load categories. Please try again."
+      );
+    }
+  };
+
+  const debouncedSearch = useCallback(
+    debounce((value) => {
+      setSearchQuery(value);
+    }, 500),
+    []
+  );
+
+  const handleSearchChange = (e) => {
+    debouncedSearch(e.target.value);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -111,6 +154,11 @@ export default function Articles() {
   const handleCategoryInputChange = (e) => {
     const { name, value } = e.target;
     setCategoryFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCommentInputChange = (e) => {
+    const { name, value } = e.target;
+    setCommentFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const debouncedHandleContentChange = useCallback(
@@ -176,7 +224,7 @@ export default function Articles() {
       }
 
       if (response.data.success) {
-        await fetchArticlesAndUpdateState();
+        await fetchArticles();
         setIsModalOpen(false);
         resetForm();
         setSuccess(
@@ -191,29 +239,22 @@ export default function Articles() {
     }
   };
 
-  const fetchArticlesAndUpdateState = async () => {
-    try {
-      const response = await api.get("/articles", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setArticles(Array.isArray(response.data) ? response.data : []);
-    } catch (err) {
-      setArticles([]);
-      setError(
-        err.response?.data?.error || "Failed to load articles. Please try again."
-      );
+  const fetchCommentsAndUpdateState = async (articleId) => {
+    if (!token) {
+      setError("Token not found. Please log in.");
+      setComments([]);
+      return;
     }
-  };
 
-  const fetchCategoriesAndUpdateState = async () => {
     try {
-      const response = await api.get("/categories", {
+      const response = await api.get(`/comments?article_id=${articleId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setCategories(Array.isArray(response.data) ? response.data : []);
+      setComments(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
+      setComments([]);
       setError(
-        err.response?.data?.error || "Failed to load categories. Please try again."
+        err.response?.data?.error || "Failed to load comments. Please try again."
       );
     }
   };
@@ -273,6 +314,13 @@ export default function Articles() {
     setIsModalOpen(true);
   };
 
+  const openCommentModal = (article) => {
+    setCurrentArticle(article);
+    resetCommentForm();
+    fetchCommentsAndUpdateState(article.id);
+    setIsCommentModalOpen(true);
+  };
+
   const resetForm = () => {
     setFormData({ title: "", content: "", category_id: "", image: null });
     setError("");
@@ -286,6 +334,12 @@ export default function Articles() {
     setIsCategoryEditMode(false);
   };
 
+  const resetCommentForm = () => {
+    setCommentFormData({ content: "" });
+    setCurrentComment(null);
+    setIsCommentEditMode(false);
+  };
+
   const openCategoryModal = () => {
     resetCategoryForm();
     setIsCategoryModalOpen(true);
@@ -296,6 +350,13 @@ export default function Articles() {
     setCurrentCategory(category);
     setCategoryFormData({ name: category.name || "" });
     setIsCategoryModalOpen(true);
+  };
+
+  const openEditCommentModal = (comment) => {
+    setIsCommentEditMode(true);
+    setCurrentComment(comment);
+    setCommentFormData({ content: comment.content || "" });
+    setIsCommentModalOpen(true);
   };
 
   const handleCategorySubmit = async (e) => {
@@ -334,7 +395,7 @@ export default function Articles() {
       }
 
       if (response.data.message) {
-        await fetchCategoriesAndUpdateState();
+        await fetchCategories();
         setIsCategoryModalOpen(false);
         resetCategoryForm();
         setSuccess(
@@ -389,6 +450,100 @@ export default function Articles() {
     }
   };
 
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!token) {
+      setError("Token not found. Please log in.");
+      return;
+    }
+
+    if (!commentFormData.content) {
+      setError("Comment content is required.");
+      return;
+    }
+
+    try {
+      let response;
+      if (isCommentEditMode && currentComment?.id) {
+        response = await api.put(
+          "/comments",
+          { id: currentComment.id, content: commentFormData.content },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+      } else {
+        response = await api.post(
+          "/comments",
+          {
+            article_id: currentArticle.id,
+            content: commentFormData.content,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+      }
+
+      if (response.data.success || response.data.message) {
+        await fetchCommentsAndUpdateState(currentArticle.id);
+        setIsCommentModalOpen(false);
+        resetCommentForm();
+        setSuccess(
+          `Comment ${isCommentEditMode ? "updated" : "created"} successfully!`
+        );
+      } else {
+        setError(
+          response.data.error ||
+            `Failed to ${isCommentEditMode ? "update" : "create"} comment.`
+        );
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.error ||
+          `Failed to ${isCommentEditMode ? "update" : "create"} comment.`
+      );
+      console.error("handleCommentSubmit Error:", err);
+    }
+  };
+
+  const handleCommentDelete = (comment) => {
+    setCommentToDelete(comment);
+    setIsCommentConfirmModalOpen(true);
+  };
+
+  const executeCommentDelete = async () => {
+    if (!token) {
+      setError("Token not found. Please log in.");
+      setIsCommentConfirmModalOpen(false);
+      setCommentToDelete(null);
+      return;
+    }
+
+    try {
+      const response = await api.delete("/comments", {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { id: commentToDelete.id },
+      });
+
+      if (response.data.success || response.data.message) {
+        setComments(
+          comments.filter((comment) => comment.id !== commentToDelete.id)
+        );
+        setIsCommentConfirmModalOpen(false);
+        setCommentToDelete(null);
+        setSuccess("Comment deleted successfully!");
+      } else {
+        setError(response.data.error || "Failed to delete comment.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to delete comment.");
+    }
+  };
+
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
     return `${API_BASE_URL}/${imagePath}`;
@@ -414,79 +569,69 @@ export default function Articles() {
     }
   };
 
+  const handleCommentSubmitTrigger = () => {
+    if (commentFormRef.current) {
+      commentFormRef.current.requestSubmit();
+    }
+  };
+
   return (
-    <div className="container mx-auto">
-      <div className="flex justify-center sm:justify-between flex-col sm:flex-row items-center mb-6 space-y-2 sm:space-y-0 sm:space-x-2">
+    <div className="container mx-auto mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
         <h2 className="text-2xl font-bold">Articles</h2>
-        <div className="space-x-2 sm:flex flex gap-2">
-          <Button
-            onClick={openCategoryModal}
-            className="bg-green-500 text-white hover:bg-green-600"
-          >
-            Manage Categories
-          </Button>
-          <Button
-            onClick={openCreateModal}
-            className="bg-blue-500 text-white hover:bg-blue-600"
-          >
-            Create Article
-          </Button>
+        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              placeholder="Search articles..."
+              onChange={handleSearchChange}
+              className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm"
+            />
+            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          </div>
+          <div className="flex space-x-2">
+            <Button onClick={openCategoryModal} color="green">
+              Manage Categories
+            </Button>
+            <Button onClick={openCreateModal} color="green">
+              Create Article
+            </Button>
+          </div>
         </div>
       </div>
 
       <Notification message={error} type="error" />
       <Notification message={success} type="success" />
 
-      {articles.length === 0 ? (
-        <p className="text-gray-600">No articles available.</p>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin text-rose-500">
+            <FiLoader size={40} />
+          </div>
+        </div>
+      ) : articles.length === 0 ? (
+        <p className="text-gray-600 text-center">
+          {searchQuery ? "No articles found for your search." : "No articles available."}
+        </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {articles.map((article) => (
-            <div
+            <ArticleCard
               key={article.id}
-              className="bg-white rounded-lg shadow-md p-6 flex flex-col"
+              article={article}
+              getImageUrl={getImageUrl}
+              truncateHTML={truncateHTML}
+              onCommentClick={openCommentModal}
+              onEditClick={openEditModal}
+              onDeleteClick={handleDelete}
             >
-              {article.image && (
-                <img
-                  src={getImageUrl(article.image)}
-                  alt={article.title}
-                  className="w-full h-48 object-cover rounded-md mb-4"
-                  onError={(e) => {
-                    e.target.src = "https://via.placeholder.com/150";
-                    console.error(`Failed to load image: ${article.image}`);
-                  }}
-                />
-              )}
-              <h2 className="text-xl font-semibold mb-2">{article.title}</h2>
-              <div
-                className="text-gray-600 mb-4 line-clamp-3"
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(truncateHTML(article.content, 100)),
-                }}
+              <ArticleActions
+                article={article}
+                onCommentClick={openCommentModal}
+                onEditClick={openEditModal}
+                onDeleteClick={handleDelete}
               />
-              <p className="text-sm text-gray-500 mb-2">
-                Category: {article.category_name || "No category"}
-              </p>
-              <p className="text-sm text-gray-500 mb-4">
-                Author: {article.username}
-              </p>
-              <div className="flex justify-end space-x-2 mt-auto">
-                <Button
-                  color="green"
-                  onClick={() => openEditModal(article)}
-                  className="p-2 bg-green-500 text-white hover:bg-green-600"
-                >
-                  <FiEdit />
-                </Button>
-                <Button
-                  color="rose"
-                  onClick={() => handleDelete(article)}
-                  className="p-2 bg-rose-500 text-white hover:bg-rose-600"
-                >
-                  <FiTrash2 />
-                </Button>
-              </div>
-            </div>
+            </ArticleCard>
           ))}
         </div>
       )}
@@ -508,7 +653,7 @@ export default function Articles() {
             </Button>
             <Button
               type="button"
-              className="bg-blue-500 text-white hover:bg-blue-600"
+              color="green"
               onClick={handleSubmitTrigger}
             >
               {isEditMode ? "Update Article" : "Create Article"}
@@ -646,7 +791,7 @@ export default function Articles() {
             </Button>
             <Button
               type="button"
-              className="bg-blue-500 text-white hover:bg-blue-600"
+              color="green"
               onClick={handleCategorySubmitTrigger}
             >
               {isCategoryEditMode ? "Update Category" : "Create Category"}
@@ -685,14 +830,14 @@ export default function Articles() {
                     <Button
                       color="green"
                       onClick={() => openEditCategoryModal(category)}
-                      className="p-1 bg-green-500 text-white hover:bg-green-600"
+                      className="p-1"
                     >
                       <FiEdit />
                     </Button>
                     <Button
                       color="rose"
                       onClick={() => handleCategoryDelete(category)}
-                      className="p-1 bg-rose-500 text-white hover:bg-rose-600"
+                      className="p-1"
                     >
                       <FiTrash2 />
                     </Button>
@@ -727,6 +872,155 @@ export default function Articles() {
             Cancel
           </Button>
           <Button color="rose" onClick={executeCategoryDelete}>
+            Confirm Delete
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isCommentModalOpen}
+        onClose={() => {
+          setIsCommentModalOpen(false);
+          setCurrentArticle(null);
+          resetCommentForm();
+        }}
+        title={`Manage Comments for "${currentArticle?.title || "Article"}"`}
+        className="max-w-2xl w-full"
+        footer={
+          <div className="flex justify-end space-x-2">
+            <Button
+              type="button"
+              color="rose"
+              onClick={() => {
+                setIsCommentModalOpen(false);
+                setCurrentArticle(null);
+                resetCommentForm();
+              }}
+            >
+              Close
+            </Button>
+            {!isCommentEditMode && (
+              <Button
+                type="button"
+                color="green"
+                onClick={handleCommentSubmitTrigger}
+              >
+                Add Comment
+              </Button>
+            )}
+            {isCommentEditMode && (
+              <Button
+                type="button"
+                color="green"
+                onClick={handleCommentSubmitTrigger}
+              >
+                Update Comment
+              </Button>
+            )}
+          </div>
+        }
+      >
+        <form
+          ref={commentFormRef}
+          onSubmit={handleCommentSubmit}
+          className="space-y-4 mb-6"
+        >
+          <Input
+            label="Comment Content"
+            id="content"
+            name="content"
+            value={commentFormData.content}
+            onChange={handleCommentInputChange}
+            placeholder="Enter your comment"
+            required
+          />
+        </form>
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold mb-2">Existing Comments</h3>
+          {comments.length === 0 ? (
+            <p className="text-gray-600">No comments available.</p>
+          ) : (
+            <ul className="space-y-2 max-h-60 overflow-y-auto">
+              {comments.map((comment) => (
+                <li
+                  key={comment.id}
+                  className="flex justify-between items-center p-2 bg-gray-100 rounded-md"
+                >
+                  <div>
+                    <p className="text-gray-600">{comment.content}</p>
+                    <p className="text-sm text-gray-500">
+                      By: {comment.username}{" "}
+                      {comment.updated_at && (
+                        <span>
+                          | Updated: {new Date(comment.updated_at).toLocaleString('en-US', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false,
+                          })}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      color="green"
+                      onClick={() => openEditCommentModal(comment)}
+                      className="p-1"
+                      disabled={
+                        userRole !== "admin" &&
+                        comment.user_id !==
+                          JSON.parse(localStorage.getItem("user") || "{}").id
+                      }
+                    >
+                      <FiEdit />
+                    </Button>
+                    <Button
+                      color="rose"
+                      onClick={() => handleCommentDelete(comment)}
+                      className="p-1"
+                      disabled={
+                        userRole !== "admin" &&
+                        comment.user_id !==
+                          JSON.parse(localStorage.getItem("user") || "{}").id
+                      }
+                    >
+                      <FiTrash2 />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isCommentConfirmModalOpen}
+        onClose={() => {
+          setIsCommentConfirmModalOpen(false);
+          setCommentToDelete(null);
+        }}
+        title="Confirm Delete Comment"
+      >
+        <div className="mb-4">
+          Are you sure you want to delete this comment by{' '}
+          <strong>{commentToDelete?.username}</strong>?
+        </div>
+        <div className="flex justify-end space-x-2">
+          <Button
+            color="gray"
+            onClick={() => {
+              setIsCommentConfirmModalOpen(false);
+              setCommentToDelete(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button color="rose" onClick={executeCommentDelete}>
             Confirm Delete
           </Button>
         </div>

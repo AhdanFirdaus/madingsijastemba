@@ -1,6 +1,7 @@
 const colorMap = {
   green: 'bg-green-500 hover:bg-green-600',
   rose: 'bg-rose-500 hover:bg-rose-600',
+  blue: 'bg-blue-500 hover:bg-blue-600',
   // tambahkan warna lain sesuai kebutuhan
 };
 

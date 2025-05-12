@@ -8,16 +8,8 @@ function Sidebar({ isOpen, toggleSidebar }) {
   const navItems = [
     { name: 'Statistic', path: '/admin/statistic', icon: <FiBarChart2 className="w-5 h-5" /> },
     { name: 'Articles', path: '/admin/articles', icon: <FiFileText className="w-5 h-5" /> },
-    { name: 'Comments', path: '/admin/comments', icon: <FiMessageSquare className="w-5 h-5" /> },
     { name: 'Users', path: '/admin/users', icon: <FiUsers className="w-5 h-5" /> },
   ];
-
-  // Determine the current page title based on the route
-  const getPageTitle = () => {
-    const currentPath = location.pathname;
-    const matchedItem = navItems.find(item => item.path === currentPath);
-    return matchedItem ? matchedItem.name : 'Admin Mading'; // Fallback title
-  };
 
   const handleLogout = async () => {
     try {
@@ -61,7 +53,7 @@ function Sidebar({ isOpen, toggleSidebar }) {
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-white text-xl font-bold">{getPageTitle()}</h1>
+          <h1 className="text-white text-xl font-bold">Mading Sija Stemba</h1>
           <button 
             className="md:hidden text-white focus:outline-none p-2 rounded-md hover:bg-rose-400 transition-colors duration-200"
             onClick={toggleSidebar}
