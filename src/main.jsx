@@ -9,6 +9,10 @@ import Admin from './Pages/Admin/admin';
 import Statistic from './Pages/Admin/statistic';
 import Articles from './Pages/Admin/articles';
 import Users from './Pages/Admin/users';
+import Home from './Pages/Home';
+import Blog from './Pages/Admin/Blog';
+import About from './Pages/About';
+import Contact from './Pages/Contact';
 
 
 // ProtectedRoute Component to secure admin routes
@@ -39,7 +43,7 @@ function ProtectedRoute({ children }) {
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <h1 className='flex items-center justify-center min-h-screen text-2xl font-bold text-center'>Hello World</h1>,
+    element: <Home/>,
     errorElement: <ErrorPage />,
   },
   {
@@ -49,6 +53,18 @@ const router = createBrowserRouter([
   {
     path: 'login',
     element: <Login />,
+  },
+  {
+    path: 'blog',
+    element: <Blog />,
+  },
+  {
+    path: 'about',
+    element: <About />,
+  },
+  {
+    path: 'contact',
+    element: <Contact />,
   },
   {
     path: 'admin',
