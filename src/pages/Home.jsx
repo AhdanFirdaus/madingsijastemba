@@ -36,7 +36,7 @@ export default function Home() {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1 }}
-            className="lg:w-1/2 flex justify-center"
+            className="lg:w-1/2 flex justify-end"
           >
             <div className="relative">
               {/* Placeholder for illustration */}
