@@ -11,7 +11,7 @@ const Button = ({ children, onClick, color = 'green', type = 'button', className
     <button
       type={type}
       onClick={onClick}
-      className={`px-4 py-2 rounded-md text-white transition cursor-pointer ${colorClasses} ${className}`}
+      className={`px-4 py-2 rounded-md text-white transition duration-300 font-semibold cursor-pointer ${colorClasses} ${className}`}
     >
       {children}
     </button>
