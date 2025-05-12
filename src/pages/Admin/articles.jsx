@@ -8,8 +8,9 @@ import ReactQuill from "react-quill-new";
 import "react-quill/dist/quill.snow.css";
 import DOMPurify from "dompurify";
 import debounce from "lodash/debounce";
-import { FiEdit, FiTrash2, FiSearch, FiLoader } from "react-icons/fi";
+import { FiSearch, FiLoader, FiEdit, FiTrash2 } from "react-icons/fi";
 import ArticleCard from "../../components/Elements/ArticleCard";
+import ArticleActions from "../../components/Elements/ArticleActions";
 
 const API_BASE_URL = "http://localhost/madingsijastemba/api";
 
@@ -65,12 +66,14 @@ export default function Articles() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [token] = useState(localStorage.getItem("token"));
-  const [userRole] = useState(localStorage.getItem("role") || "user");
+  const [userRole] = useState(
+    JSON.parse(localStorage.getItem("user") || "{}").role || "user"
+  );
   const formRef = useRef(null);
   const categoryFormRef = useRef(null);
   const commentFormRef = useRef(null);
 
-  const MINIMUM_LOADING_TIME = 500; 
+  const MINIMUM_LOADING_TIME = 500;
 
   useEffect(() => {
     fetchArticles();
@@ -311,6 +314,13 @@ export default function Articles() {
     setIsModalOpen(true);
   };
 
+  const openCommentModal = (article) => {
+    setCurrentArticle(article);
+    resetCommentForm();
+    fetchCommentsAndUpdateState(article.id);
+    setIsCommentModalOpen(true);
+  };
+
   const resetForm = () => {
     setFormData({ title: "", content: "", category_id: "", image: null });
     setError("");
@@ -340,13 +350,6 @@ export default function Articles() {
     setCurrentCategory(category);
     setCategoryFormData({ name: category.name || "" });
     setIsCategoryModalOpen(true);
-  };
-
-  const openCommentModal = (article) => {
-    setCurrentArticle(article);
-    resetCommentForm();
-    fetchCommentsAndUpdateState(article.id);
-    setIsCommentModalOpen(true);
   };
 
   const openEditCommentModal = (comment) => {
@@ -573,7 +576,7 @@ export default function Articles() {
   };
 
   return (
-    <div className="container mx-auto px-4">
+    <div className="container mx-auto mb-6">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
         <h2 className="text-2xl font-bold">Articles</h2>
         <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
@@ -602,7 +605,9 @@ export default function Articles() {
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin text-rose-500"><FiLoader size={40} /></div>
+          <div className="animate-spin text-rose-500">
+            <FiLoader size={40} />
+          </div>
         </div>
       ) : articles.length === 0 ? (
         <p className="text-gray-600 text-center">
@@ -614,12 +619,19 @@ export default function Articles() {
             <ArticleCard
               key={article.id}
               article={article}
+              getImageUrl={getImageUrl}
+              truncateHTML={truncateHTML}
               onCommentClick={openCommentModal}
               onEditClick={openEditModal}
               onDeleteClick={handleDelete}
-              getImageUrl={getImageUrl}
-              truncateHTML={truncateHTML}
-            />
+            >
+              <ArticleActions
+                article={article}
+                onCommentClick={openCommentModal}
+                onEditClick={openEditModal}
+                onDeleteClick={handleDelete}
+              />
+            </ArticleCard>
           ))}
         </div>
       )}
@@ -937,10 +949,19 @@ export default function Articles() {
                   <div>
                     <p className="text-gray-600">{comment.content}</p>
                     <p className="text-sm text-gray-500">
-                      By: {comment.username} |{" "}
-                      { Instant.now().toString() }
+                      By: {comment.username}{" "}
                       {comment.updated_at && (
-                        <span> | Updated: {new Date(comment.updated_at).toLocaleString()}</span>
+                        <span>
+                          | Updated: {new Date(comment.updated_at).toLocaleString('en-US', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false,
+                          })}
+                        </span>
                       )}
                     </p>
                   </div>
@@ -949,7 +970,11 @@ export default function Articles() {
                       color="green"
                       onClick={() => openEditCommentModal(comment)}
                       className="p-1"
-                      disabled={userRole !== "admin" && comment.user_id !== JSON.parse(localStorage.getItem("userData") || "{}").user_id}
+                      disabled={
+                        userRole !== "admin" &&
+                        comment.user_id !==
+                          JSON.parse(localStorage.getItem("user") || "{}").id
+                      }
                     >
                       <FiEdit />
                     </Button>
@@ -957,7 +982,11 @@ export default function Articles() {
                       color="rose"
                       onClick={() => handleCommentDelete(comment)}
                       className="p-1"
-                      disabled={userRole !== "admin" && comment.user_id !== JSON.parse(localStorage.getItem("userData") || "{}").user_id}
+                      disabled={
+                        userRole !== "admin" &&
+                        comment.user_id !==
+                          JSON.parse(localStorage.getItem("user") || "{}").id
+                      }
                     >
                       <FiTrash2 />
                     </Button>
