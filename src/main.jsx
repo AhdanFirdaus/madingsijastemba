@@ -10,7 +10,7 @@ import Statistic from './Pages/Admin/statistic';
 import Articles from './Pages/Admin/articles';
 import Users from './Pages/Admin/users';
 import Home from './Pages/Home';
-import Blog from './Pages/Admin/Blog';
+import Blog from './Pages/Blog';
 import About from './Pages/About';
 import Contact from './Pages/Contact';
 
