@@ -24,7 +24,7 @@ const Footer = () => {
         </Button>
       </div>
 
-      <div className="border-t border-gray-200 mt-10 pt-6 px-4 max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
+      <div className="border-t border-gray-200 mt-10 pt-6 px-4 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
         <div className="flex items-center gap-4">
           <img src={logostemba} alt={logostemba} className="h-8" />
           <img src={logosija} alt={logosija} className="h-8" />
