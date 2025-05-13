@@ -5,13 +5,13 @@ const colorMap = {
   // tambahkan warna lain sesuai kebutuhan
 };
 
-const Button = ({ children, onClick, color = 'green', type = 'button', className = '' }) => {
+const Button = ({ children, onClick, color = '', type = 'button', className = '', rounded = 'rounded-md', txtcolor = "text-white" }) => {
   const colorClasses = colorMap[color] || colorMap['green']; // default ke hijau
   return (
     <button
       type={type}
       onClick={onClick}
-      className={`px-4 py-2 rounded-md text-white transition duration-300 font-semibold cursor-pointer ${colorClasses} ${className}`}
+      className={`px-4 py-2 transition duration-300 font-semibold cursor-pointer ${colorClasses} ${className} ${rounded} ${txtcolor}`}
     >
       {children}
     </button>

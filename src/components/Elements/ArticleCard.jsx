@@ -42,26 +42,28 @@ const ArticleCard = ({
           }}
         />
 
-        {/* Info penulis dan tanggal */}
-        <div className="text-xs text-rose-600 mt-3">
-          <span className="font-medium">By: {article.username || "Anonim"}</span> <br />
-          <span className="text-gray-500">
-            {article.created_at
-              ? new Date(article.created_at).toLocaleString('en-US', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                  hour12: false,
-                })
-              : "Tanggal tidak tersedia"}
-          </span>
+        {/* Info penulis/tanggal dan actions dalam satu baris */}
+        <div className="flex flex-row justify-between items-center mt-3">
+          <div className="text-xs text-rose-600">
+            <span className="font-medium">By: {article.username || "Anonim"}</span>
+            <br />
+            <span className="text-gray-500">
+              {article.created_at
+                ? new Date(article.created_at).toLocaleString('en-US', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false,
+                  })
+                : "Tanggal tidak tersedia"}
+            </span>
+          </div>
+          {/* Injected actions */}
+          {children}
         </div>
-
-        {/* Injected actions */}
-        {children}
       </div>
     </div>
   );
