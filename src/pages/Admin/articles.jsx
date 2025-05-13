@@ -12,7 +12,7 @@ import { FiSearch, FiLoader, FiEdit, FiTrash2 } from "react-icons/fi";
 import ArticleCard from "../../components/Elements/ArticleCard";
 import ArticleActions from "../../components/Elements/ArticleActions";
 
-const API_BASE_URL = "http://localhost/madingsijastemba/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const quillModules = {
   toolbar: [
@@ -198,16 +198,17 @@ export default function Articles() {
 
     const sanitizedContent = DOMPurify.sanitize(formData.content);
     const data = new FormData();
+    data.append("action", isEditMode ? "update" : "create"); // Tambahkan action
     data.append("title", formData.title);
     data.append("content", sanitizedContent);
     if (formData.category_id) data.append("category_id", formData.category_id);
     if (formData.image) data.append("image", formData.image);
+    if (isEditMode && currentArticle?.id) data.append("id", currentArticle.id); // Untuk PUT
 
     try {
       let response;
       if (isEditMode && currentArticle?.id) {
-        data.append("id", currentArticle.id);
-        data.append("_method", "PUT");
+        data.append("_method", "PUT"); // Gunakan _method untuk override ke PUT
         response = await api.post(`/articles`, data, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -223,7 +224,7 @@ export default function Articles() {
         });
       }
 
-      if (response.data.success) {
+      if (response.data.success || response.data.message) {
         await fetchArticles();
         setIsModalOpen(false);
         resetForm();
@@ -617,21 +618,24 @@ export default function Articles() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {articles.map((article) => (
             <ArticleCard
-              key={article.id}
-              article={article}
-              getImageUrl={getImageUrl}
-              truncateHTML={truncateHTML}
-              onCommentClick={openCommentModal}
-              onEditClick={openEditModal}
-              onDeleteClick={handleDelete}
-            >
-              <ArticleActions
+                key={article.id}
                 article={article}
+                getImageUrl={getImageUrl}
+                truncateHTML={truncateHTML}
                 onCommentClick={openCommentModal}
                 onEditClick={openEditModal}
                 onDeleteClick={handleDelete}
-              />
-            </ArticleCard>
+              >
+                <ArticleActions
+                  article={article}
+                  onCommentClick={openCommentModal}
+                  onEditClick={openEditModal}
+                  onDeleteClick={handleDelete}
+                  showComment={true} // Tampilkan tombol komentar
+                  showEdit={userRole === "admin" || article.user_id === JSON.parse(localStorage.getItem("user") || "{}").id}
+                  showDelete={userRole === "admin" || article.user_id === JSON.parse(localStorage.getItem("user") || "{}").id}
+                />
+              </ArticleCard>
           ))}
         </div>
       )}

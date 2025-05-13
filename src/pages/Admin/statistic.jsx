@@ -5,7 +5,7 @@ import Notification from "../../components/Elements/Notification";
 import ArticleCard from "../../components/Elements/ArticleCard";
 import { FiLoader, FiRefreshCw } from "react-icons/fi";
 
-const API_BASE_URL = "http://localhost/madingsijastemba/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function Statistic() {
   const [stats, setStats] = useState({
