@@ -6,9 +6,33 @@ import { Link, useNavigate } from 'react-router';
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  // Check if user is logged in by presence of token in localStorage
+  const isAuthenticated = !!localStorage.getItem('token');
 
   const handleLogin = () => {
     navigate('/login');
+    setIsOpen(false); // Close mobile menu
+  };
+
+  const handleLogout = async () => {
+    try {
+      // Clear localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Redirect to login page
+      navigate('/login');
+      
+      // Close mobile menu
+      setIsOpen(false);
+    } catch (err) {
+      console.error('Logout failed:', err);
+      // Still clear localStorage and redirect even if API call fails
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      navigate('/login');
+      setIsOpen(false);
+    }
   };
 
   return (
@@ -25,7 +49,13 @@ const Navbar = () => {
             <Link to="/blog" className="text-gray-800 hover:text-rose-600">Blog</Link>
             <Link to="/about" className="text-gray-800 hover:text-rose-600">About</Link>
             <Link to="/contact" className="text-gray-800 hover:text-rose-600">Contact</Link>
-            <Button color="rose" className="font-bold" onClick={handleLogin}>Login</Button>
+            <Button
+              color="rose"
+              className="font-bold"
+              onClick={isAuthenticated ? handleLogout : handleLogin}
+            >
+              {isAuthenticated ? 'Logout' : 'Login'}
+            </Button>
           </div>
 
           {/* Hamburger for Mobile */}
@@ -43,7 +73,13 @@ const Navbar = () => {
               <Link to="/blog" className="text-gray-800 hover:text-rose-600" onClick={() => setIsOpen(false)}>Blog</Link>
               <Link to="/about" className="text-gray-800 hover:text-rose-600" onClick={() => setIsOpen(false)}>About</Link>
               <Link to="/contact" className="text-gray-800 hover:text-rose-600" onClick={() => setIsOpen(false)}>Contact</Link>
-              <Button color="rose" className="font-bold w-full text-center" onClick={() => { handleLogin(); setIsOpen(false); }}>Masuk</Button>
+              <Button
+                color="rose"
+                className="font-bold w-full text-center"
+                onClick={isAuthenticated ? handleLogout : handleLogin}
+              >
+                {isAuthenticated ? 'Logout' : 'Login'}
+              </Button>
             </div>
           </div>
         )}
