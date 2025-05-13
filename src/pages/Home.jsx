@@ -33,7 +33,7 @@ export default function Home() {
         .slice(0, 10)
         .map((article) => ({
           ...article,
-          liked: article.liked !== undefined ? article.liked : false, // Gunakan liked dari backend jika ada
+          liked: article.liked !== undefined ? article.liked : false,
         }));
       setArticles(sortedArticles);
 
@@ -82,14 +82,12 @@ export default function Home() {
       );
       setNotification({ message: response.data.message || "Artikel berhasil disukai!", type: "success" });
 
-      // Perbarui state lokal segera untuk UX
       setArticles((prevArticles) =>
         prevArticles.map((article) =>
           article.id === articleId ? { ...article, liked: true } : article
         )
       );
 
-      // Tingkatkan delay menjadi 2 detik untuk memastikan sinkronisasi
       await new Promise((resolve) => setTimeout(resolve, 2000));
       await fetchData();
     } catch (error) {
@@ -229,7 +227,10 @@ export default function Home() {
               <>
                 {/* Latest Article (Custom Section) */}
                 {latestArticle && (
-                  <div className="mb-12 bg-white shadow-md rounded-2xl overflow-hidden flex flex-col lg:flex-row h-auto lg:h-72">
+                  <div
+                    onClick={() => navigate(`/articles/${latestArticle.id}`)}
+                    className="mb-12 bg-white shadow-md rounded-2xl overflow-hidden flex flex-col lg:flex-row h-auto lg:h-72 cursor-pointer"
+                  >
                     <div className="w-full lg:w-1/3">
                       <img
                         src={getImageUrl(latestArticle.image)}
@@ -245,7 +246,10 @@ export default function Home() {
                       <p className="text-gray-600 mb-4 flex-grow">
                         {truncateHTML(latestArticle.content, 350)}
                       </p>
-                      <div className="flex justify-between items-center mt-auto">
+                      <div
+                        className="flex justify-between items-center mt-auto"
+                        onClick={(e) => e.stopPropagation()} // Mencegah navigasi saat klik tombol like
+                      >
                         <div>
                           <div className="text-xs">
                             <span className="font-medium text-rose-600">By: {latestArticle.username || "Anonim"}</span>
@@ -316,8 +320,7 @@ export default function Home() {
         <p className="text-gray-700">Please log in to like this article.</p>
       </Modal>
 
-      {/* Footer */}
-      <Footer/>
+      <Footer />
     </>
   );
 }
