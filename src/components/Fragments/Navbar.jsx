@@ -25,7 +25,7 @@ const Navbar = () => {
             <Link to="/blog" className="text-gray-800 hover:text-rose-600">Blog</Link>
             <Link to="/about" className="text-gray-800 hover:text-rose-600">About</Link>
             <Link to="/contact" className="text-gray-800 hover:text-rose-600">Contact</Link>
-            <Button color="rose" className="font-bold" onClick={handleLogin}>Masuk</Button>
+            <Button color="rose" className="font-bold" onClick={handleLogin}>Login</Button>
           </div>
 
           {/* Hamburger for Mobile */}
