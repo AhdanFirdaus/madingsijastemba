@@ -10,6 +10,7 @@ import { FiHeart } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
 import { useState, useEffect } from "react";
 import api from "../api/axios";
+import Footer from "../components/Fragments/Footer";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -297,10 +298,6 @@ export default function Home() {
         </div>
       </div>
 
-      {notification.message && (
-        <Notification message={notification.message} type={notification.type} />
-      )}
-
       <Modal
         isOpen={isModalOpen}
         onClose={handleModalClose}
@@ -318,6 +315,9 @@ export default function Home() {
       >
         <p className="text-gray-700">Please log in to like this article.</p>
       </Modal>
+
+      {/* Footer */}
+      <Footer/>
     </>
   );
 }
