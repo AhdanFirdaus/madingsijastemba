@@ -26,3 +26,6 @@ dist-ssr
 # Ignore Docker-related files
 Dockerfile
 docker-compose.yml
+
+# ignore environment
+.env
