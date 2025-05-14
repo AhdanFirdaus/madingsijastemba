@@ -198,17 +198,18 @@ export default function Articles() {
 
     const sanitizedContent = DOMPurify.sanitize(formData.content);
     const data = new FormData();
-    data.append("action", isEditMode ? "update" : "create"); // Tambahkan action
     data.append("title", formData.title);
     data.append("content", sanitizedContent);
     if (formData.category_id) data.append("category_id", formData.category_id);
     if (formData.image) data.append("image", formData.image);
-    if (isEditMode && currentArticle?.id) data.append("id", currentArticle.id); // Untuk PUT
+    if (isEditMode && currentArticle?.id) {
+      data.append("id", currentArticle.id);
+      data.append("_method", "PUT");
+    }
 
     try {
       let response;
       if (isEditMode && currentArticle?.id) {
-        data.append("_method", "PUT"); // Gunakan _method untuk override ke PUT
         response = await api.post(`/articles`, data, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -224,7 +225,7 @@ export default function Articles() {
         });
       }
 
-      if (response.data.success || response.data.message) {
+      if (response.data.message) {
         await fetchArticles();
         setIsModalOpen(false);
         resetForm();
@@ -267,28 +268,51 @@ export default function Articles() {
 
   const executeDelete = async () => {
     if (!token) {
-      setError("Token not found. Please log in.");
+      setError("Token tidak ditemukan. Silakan login.");
       setIsConfirmModalOpen(false);
       setArticleToDelete(null);
       return;
     }
 
+    if (!articleToDelete?.id || isNaN(articleToDelete.id)) {
+      setError("Artikel tidak valid untuk dihapus.");
+      console.error("Invalid article ID:", articleToDelete?.id);
+      return;
+    }
+
     try {
+      console.log("Menghapus artikel ID:", articleToDelete.id);
       const response = await api.delete("/articles", {
         headers: { Authorization: `Bearer ${token}` },
         data: { id: articleToDelete.id },
       });
 
-      if (response.data.success) {
+      if (response.data.message) {
         setArticles(articles.filter((article) => article.id !== articleToDelete.id));
         setIsConfirmModalOpen(false);
         setArticleToDelete(null);
-        setSuccess("Article deleted successfully!");
+        setSuccess("Artikel berhasil dihapus!");
       } else {
-        setError(response.data.error || "Failed to delete article.");
+        console.error("Respon tidak valid:", response.data);
+        setError(response.data.error || "Gagal menghapus artikel.");
       }
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to delete article.");
+      console.error("Error Hapus Artikel:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+      let pesanError = "Gagal menghapus artikel. Coba lagi.";
+      if (err.response?.status === 401) {
+        pesanError = "Sesi kadaluarsa. Silakan login lagi.";
+      } else if (err.response?.status === 403) {
+        pesanError = "Anda tidak punya izin untuk menghapus artikel ini.";
+      } else if (err.response?.status === 404) {
+        pesanError = "Artikel tidak ditemukan.";
+      } else if (err.response?.data?.error) {
+        pesanError = err.response.data.error;
+      }
+      setError(pesanError);
     }
   };
 
@@ -457,18 +481,25 @@ export default function Articles() {
     setSuccess("");
 
     if (!token) {
-      setError("Token not found. Please log in.");
+      setError("Token tidak ditemukan. Silakan login.");
       return;
     }
 
     if (!commentFormData.content) {
-      setError("Comment content is required.");
+      setError("Konten komentar wajib diisi.");
+      return;
+    }
+
+    if (!currentArticle?.id || isNaN(currentArticle.id)) {
+      setError("Artikel tidak valid untuk komentar.");
+      console.error("Invalid article ID:", currentArticle?.id);
       return;
     }
 
     try {
       let response;
       if (isCommentEditMode && currentComment?.id) {
+        console.log("Mengedit komentar:", { id: currentComment.id, content: commentFormData.content });
         response = await api.put(
           "/comments",
           { id: currentComment.id, content: commentFormData.content },
@@ -477,10 +508,14 @@ export default function Articles() {
           }
         );
       } else {
+        console.log("Membuat komentar baru:", {
+          article_id: Number(currentArticle.id),
+          content: commentFormData.content,
+        });
         response = await api.post(
           "/comments",
           {
-            article_id: currentArticle.id,
+            article_id: Number(currentArticle.id),
             content: commentFormData.content,
           },
           {
@@ -489,25 +524,32 @@ export default function Articles() {
         );
       }
 
-      if (response.data.success || response.data.message) {
+      if (response.data.message) {
         await fetchCommentsAndUpdateState(currentArticle.id);
         setIsCommentModalOpen(false);
         resetCommentForm();
-        setSuccess(
-          `Comment ${isCommentEditMode ? "updated" : "created"} successfully!`
-        );
+        setSuccess(`Komentar ${isCommentEditMode ? "diperbarui" : "dibuat"} berhasil!`);
       } else {
-        setError(
-          response.data.error ||
-            `Failed to ${isCommentEditMode ? "update" : "create"} comment.`
-        );
+        console.error("Respon tidak valid:", response.data);
+        setError(response.data.error || `Gagal ${isCommentEditMode ? "memperbarui" : "membuat"} komentar.`);
       }
     } catch (err) {
-      setError(
-        err.response?.data?.error ||
-          `Failed to ${isCommentEditMode ? "update" : "create"} comment.`
-      );
-      console.error("handleCommentSubmit Error:", err);
+      console.error("Error Komentar:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+      let pesanError = "Gagal membuat komentar. Coba lagi.";
+      if (err.response?.status === 401) {
+        pesanError = "Sesi kadaluarsa. Silakan login lagi.";
+      } else if (err.response?.status === 403) {
+        pesanError = "Anda tidak punya izin untuk berkomentar.";
+      } else if (err.response?.status === 404) {
+        pesanError = "Artikel tidak ditemukan.";
+      } else if (err.response?.data?.error) {
+        pesanError = err.response.data.error;
+      }
+      setError(pesanError);
     }
   };
 
@@ -530,7 +572,7 @@ export default function Articles() {
         data: { id: commentToDelete.id },
       });
 
-      if (response.data.success || response.data.message) {
+      if (response.data.message) {
         setComments(
           comments.filter((comment) => comment.id !== commentToDelete.id)
         );
@@ -618,24 +660,24 @@ export default function Articles() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {articles.map((article) => (
             <ArticleCard
-                key={article.id}
+              key={article.id}
+              article={article}
+              getImageUrl={getImageUrl}
+              truncateHTML={truncateHTML}
+              onCommentClick={openCommentModal}
+              onEditClick={openEditModal}
+              onDeleteClick={handleDelete}
+            >
+              <ArticleActions
                 article={article}
-                getImageUrl={getImageUrl}
-                truncateHTML={truncateHTML}
                 onCommentClick={openCommentModal}
                 onEditClick={openEditModal}
                 onDeleteClick={handleDelete}
-              >
-                <ArticleActions
-                  article={article}
-                  onCommentClick={openCommentModal}
-                  onEditClick={openEditModal}
-                  onDeleteClick={handleDelete}
-                  showComment={true} // Tampilkan tombol komentar
-                  showEdit={userRole === "admin" || article.user_id === JSON.parse(localStorage.getItem("user") || "{}").id}
-                  showDelete={userRole === "admin" || article.user_id === JSON.parse(localStorage.getItem("user") || "{}").id}
-                />
-              </ArticleCard>
+                showComment={true}
+                showEdit={userRole === "admin" || article.user_id === JSON.parse(localStorage.getItem("user") || "{}").id}
+                showDelete={userRole === "admin" || article.user_id === JSON.parse(localStorage.getItem("user") || "{}").id}
+              />
+            </ArticleCard>
           ))}
         </div>
       )}
