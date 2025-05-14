@@ -46,6 +46,7 @@ const Navbar = () => {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-6">
+            <Link to="/" className="text-gray-800 hover:text-rose-600">Home</Link>
             <Link to="/blog" className="text-gray-800 hover:text-rose-600">Blog</Link>
             <Link to="/about" className="text-gray-800 hover:text-rose-600">About</Link>
             <Link to="/contact" className="text-gray-800 hover:text-rose-600">Contact</Link>
@@ -70,6 +71,7 @@ const Navbar = () => {
         {isOpen && (
           <div className="md:hidden absolute left-0 right-0 top-full mt-2 mx-7 sm:mx-9 bg-white border rounded-lg shadow-lg z-50">
             <div className="flex flex-col gap-4 p-4">
+              <Link to="/" className="text-gray-800 hover:text-rose-600" onClick={() => setIsOpen(false)}>Home</Link>
               <Link to="/blog" className="text-gray-800 hover:text-rose-600" onClick={() => setIsOpen(false)}>Blog</Link>
               <Link to="/about" className="text-gray-800 hover:text-rose-600" onClick={() => setIsOpen(false)}>About</Link>
               <Link to="/contact" className="text-gray-800 hover:text-rose-600" onClick={() => setIsOpen(false)}>Contact</Link>
