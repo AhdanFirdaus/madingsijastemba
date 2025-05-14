@@ -11,35 +11,47 @@ import { AiFillHeart } from "react-icons/ai";
 import { useState, useEffect } from "react";
 import api from "../api/axios";
 import Footer from "../components/Fragments/Footer";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 export default function Home() {
   const navigate = useNavigate();
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState({ message: "", type: "error" });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const articlesPerPage = 6; // Number of articles per page
 
-  const fetchData = async () => {
+  const fetchData = async (categoryId = null) => {
     try {
+      setLoading(true);
+      const token = localStorage.getItem("token") || "";
+
+      // Fetch categories
+      const categoriesResponse = await api.get("/categories");
+      const limitedCategories = categoriesResponse.data.slice(0, 4);
+      setCategories(limitedCategories);
+
+      // Fetch articles with optional category filter
       const articlesResponse = await api.get("/articles", {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          category_id: categoryId, // Pass the selected category ID to the API
         },
       });
       const fetchedArticles = articlesResponse.data;
       const sortedArticles = fetchedArticles
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 10)
+        .slice(0, 10) // Limit to 10 articles as per original logic
         .map((article) => ({
           ...article,
           liked: article.liked !== undefined ? article.liked : false,
         }));
       setArticles(sortedArticles);
-
-      const categoriesResponse = await api.get("/categories");
-      const limitedCategories = categoriesResponse.data.slice(0, 4);
-      setCategories(limitedCategories);
     } catch (error) {
       console.error("Failed to fetch data:", error);
       setNotification({ message: "Gagal memuat data. Coba lagi.", type: "error" });
@@ -49,8 +61,8 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(selectedCategory); // Fetch data based on selected category
+  }, [selectedCategory]);
 
   useEffect(() => {
     if (notification.message) {
@@ -63,6 +75,11 @@ export default function Home() {
     navigate("/blog");
   };
 
+  const handleCategoryClick = (categoryId) => {
+    setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
+    setCurrentPage(1); // Reset to first page on category change
+  };
+
   const handleLikeClick = async (articleId) => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -70,7 +87,6 @@ export default function Home() {
       return;
     }
 
-    // Find the article to determine its current like status
     const article = articles.find((a) => a.id === articleId);
     const isLiked = article?.liked || false;
     const action = isLiked ? "unlike" : "like";
@@ -87,21 +103,19 @@ export default function Home() {
           },
         }
       );
-      setNotification({ 
-        message: response.data.message || (isLiked ? "Like berhasil dihapus!" : "Artikel berhasil disukai!"), 
-        type: "success" 
+      setNotification({
+        message: response.data.message || (isLiked ? "Like berhasil dihapus!" : "Artikel berhasil disukai!"),
+        type: "success",
       });
 
-      // Update the article's liked status in state
       setArticles((prevArticles) =>
         prevArticles.map((article) =>
           article.id === articleId ? { ...article, liked: !isLiked } : article
         )
       );
 
-      // Refresh data to ensure consistency with server
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      await fetchData();
+      await fetchData(selectedCategory); // Refresh data with current category filter
     } catch (error) {
       console.error("Error handling like/unlike:", error.response?.status, error.response?.data);
       let errorMessage = isLiked ? "Gagal menghapus like." : "Gagal menyukai artikel.";
@@ -151,6 +165,33 @@ export default function Home() {
 
   const latestArticle = articles[0];
   const otherArticles = articles.slice(1, 10);
+
+  // Pagination logic
+  const totalPages = Math.ceil(otherArticles.length / articlesPerPage);
+  const indexOfLastArticle = currentPage * articlesPerPage;
+  const indexOfFirstArticle = indexOfLastArticle - articlesPerPage;
+  const currentArticles = otherArticles.slice(indexOfFirstArticle, indexOfLastArticle);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const pageNumbers = [];
+  for (let i = 1; i <= totalPages; i++) {
+    pageNumbers.push(i);
+  }
 
   return (
     <>
@@ -203,7 +244,7 @@ export default function Home() {
         {/* Articles Section */}
         <div className="py-8 bg-gray-50">
           <div className="container mx-auto max-w-[90%]">
-            <div className="flex flex-wrap items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between mb-6">
               <h2 className="text-3xl font-bold text-gray-800">Articles</h2>
               <div className="flex flex-wrap gap-3 mt-4 sm:mt-0">
                 {categories.length > 0 ? (
@@ -212,8 +253,15 @@ export default function Home() {
                       key={category.id}
                       color="rose"
                       rounded="rounded-full"
-                      txtcolor="text-rose-500"
-                      className="border-rose-400 bg-rose-600/10 text-sm hover:text-white"
+                      txtcolor={
+                        selectedCategory === category.id ? "text-white" : "text-rose-500"
+                      }
+                      className={`border-rose-400 text-sm hover:text-white transition-colors ${
+                        selectedCategory === category.id
+                          ? "bg-rose-600 text-white"
+                          : "bg-rose-600/10"
+                      }`}
+                      onClick={() => handleCategoryClick(category.id)}
                     >
                       {category.name}
                     </Button>
@@ -293,7 +341,7 @@ export default function Home() {
 
                 {/* Other Articles (Grid) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {otherArticles.map((article) => (
+                  {currentArticles.map((article) => (
                     <ArticleCard
                       key={article.id}
                       article={article}
@@ -308,6 +356,41 @@ export default function Home() {
                     </ArticleCard>
                   ))}
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center my-6 space-x-2">
+                    <button
+                      onClick={handlePrevPage}
+                      disabled={currentPage === 1}
+                      className={`p-2 rounded-full cursor-pointer ${
+                        currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-rose-500 hover:bg-rose-100'
+                      }`}
+                    >
+                      <FiChevronLeft size={20} />
+                    </button>
+                    {pageNumbers.map((number) => (
+                      <button
+                        key={number}
+                        onClick={() => handlePageChange(number)}
+                        className={`px-4 py-2 rounded-md cursor-pointer ${
+                          currentPage === number ? 'bg-rose-500 text-white' : 'text-rose-500 hover:bg-rose-100'
+                        }`}
+                      >
+                        {number}
+                      </button>
+                    ))}
+                    <button
+                      onClick={handleNextPage}
+                      disabled={currentPage === totalPages}
+                      className={`p-2 rounded-full cursor-pointer ${
+                        currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-rose-500 hover:bg-rose-100'
+                      }`}
+                    >
+                      <FiChevronRight size={20} />
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
