@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import emailjs from '@emailjs/browser';
 import Input from '../components/Elements/Input';
 import Button from '../components/Elements/Button';
@@ -57,11 +57,22 @@ export default function Contact() {
     }
   };
 
+  // Timer untuk menghilangkan notifikasi sukses setelah 3 detik
+  useEffect(() => {
+    let timer;
+    if (notification.type === 'success') {
+      timer = setTimeout(() => {
+        setNotification({ message: '', type: '' });
+      }, 3000); // 3000 ms = 3 detik
+    }
+    return () => clearTimeout(timer); // Bersihkan timer saat komponen unmount
+  }, [notification]);
+
   return (
     <>
       <Navbar />
       <div className="min-h-screen flex items-center justify-center bg-white pt-32 px-4">
-        <div className="container mx-auto max-w-5xl flex flex-col md:flex-row gap-8">
+        <div className="container mx-auto max-w-6xl flex flex-col md:flex-row gap-8">
           {/* Contact Information */}
           <div className="relative bg-rose-600 text-white p-8 rounded-lg w-full md:w-1/3">
             <h2 className="text-xl font-bold mb-4">Contact Information</h2>
