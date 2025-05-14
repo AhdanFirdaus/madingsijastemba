@@ -7,7 +7,7 @@ import Footer from "../components/Fragments/Footer";
 import Button from "../components/Elements/Button";
 import Notification from "../components/Elements/Notification";
 import Modal from "../components/Elements/Modal";
-import { FiHeart } from "react-icons/fi";
+import { FiHeart, FiEdit, FiTrash2 } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
 import { FaComment } from "react-icons/fa";
 
@@ -17,10 +17,17 @@ export default function ArticleDetail() {
   const [article, setArticle] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
+  const [editCommentId, setEditCommentId] = useState(null);
+  const [editCommentContent, setEditCommentContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState({ message: "", type: "error" });
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const commentTextareaRef = useRef(null); // Ref untuk text area komentar
+  const commentTextareaRef = useRef(null);
+
+  // Retrieve user information from localStorage
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const currentUserId = currentUser.id;
+  const userRole = currentUser.role || "user";
 
   const fetchData = async () => {
     setLoading(true);
@@ -37,7 +44,7 @@ export default function ArticleDetail() {
       setComments(commentsResponse.data);
     } catch (error) {
       console.error("Failed to fetch data:", error);
-      setNotification({ message: error.message || "Gagal memuat data.", type: "error" });
+      setNotification({ message: error.message || "Failed to load data.", type: "error" });
     } finally {
       setLoading(false);
     }
@@ -65,7 +72,7 @@ export default function ArticleDetail() {
     const action = isLiked ? "unlike" : "like";
 
     try {
-      console.log("Sending request:", { action, articleId });
+      console.log("Sending like/unlike request:", { action, articleId });
       const response = await api.post(
         "/articles",
         { action, articleId },
@@ -77,7 +84,7 @@ export default function ArticleDetail() {
         }
       );
       setNotification({
-        message: response.data.message || (isLiked ? "Like berhasil dihapus!" : "Artikel berhasil disukai!"),
+        message: response.data.message || (isLiked ? "Like removed successfully!" : "Article liked successfully!"),
         type: "success",
       });
       setArticle((prev) => ({ ...prev, liked: !isLiked }));
@@ -85,26 +92,26 @@ export default function ArticleDetail() {
       await fetchData();
     } catch (error) {
       console.error("Error handling like/unlike:", error.response?.status, error.response?.data);
-      let errorMessage = isLiked ? "Gagal menghapus like." : "Gagal menyukai artikel.";
+      let errorMessage = isLiked ? "Failed to remove like." : "Failed to like article.";
       if (error.response) {
         switch (error.response.status) {
           case 401:
-            errorMessage = "Tidak diizinkan. Silakan login lagi.";
+            errorMessage = "Unauthorized. Please log in again.";
             break;
           case 404:
-            errorMessage = "Artikel tidak ditemukan.";
+            errorMessage = "Article not found.";
             break;
           case 400:
-            errorMessage = error.response.data.error || (isLiked ? "Anda belum menyukai artikel ini." : "Anda sudah menyukai artikel ini.");
+            errorMessage = error.response.data.error || (isLiked ? "You haven't liked this article." : "You already liked this article.");
             break;
           case 500:
-            errorMessage = error.response.data.error || "Error server. Coba lagi nanti.";
+            errorMessage = error.response.data.error || "Server error. Please try again later.";
             break;
           default:
-            errorMessage = error.response.data.error || "Terjadi error tak terduga.";
+            errorMessage = error.response.data.error || "An unexpected error occurred.";
         }
       } else {
-        errorMessage = "Error jaringan. Periksa koneksi Anda.";
+        errorMessage = "Network error. Please check your connection.";
       }
       setNotification({ message: errorMessage, type: "error" });
     }
@@ -118,10 +125,11 @@ export default function ArticleDetail() {
       return;
     }
     if (!newComment.trim()) {
-      setNotification({ message: "Komentar tidak boleh kosong.", type: "error" });
+      setNotification({ message: "Comment cannot be empty.", type: "error" });
       return;
     }
     try {
+      console.log("Submitting comment:", { article_id: id, content: newComment });
       const response = await api.post(
         "/comments",
         { article_id: id, content: newComment },
@@ -132,16 +140,17 @@ export default function ArticleDetail() {
           },
         }
       );
-      if (response.data.success) {
-        setNotification({ message: "Komentar berhasil ditambahkan!", type: "success" });
+      if (response.data.message) {
+        setNotification({ message: "Comment added successfully!", type: "success" });
         setNewComment("");
-        if (commentTextareaRef.current) commentTextareaRef.current.focus(); // Fokus ulang setelah submit
+        if (commentTextareaRef.current) commentTextareaRef.current.focus();
         await fetchData();
       } else {
-        throw new Error("Gagal menambahkan komentar.");
+        throw new Error("Failed to add comment.");
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.error || "Gagal menambahkan komentar. Coba lagi.";
+      console.error("Error submitting comment:", error.response?.data);
+      const errorMessage = error.response?.data?.error || "Failed to add comment. Please try again.";
       setNotification({ message: errorMessage, type: "error" });
     }
   };
@@ -152,7 +161,12 @@ export default function ArticleDetail() {
       setIsModalOpen(true);
       return;
     }
+    if (!content.trim()) {
+      setNotification({ message: "Comment cannot be empty.", type: "error" });
+      return;
+    }
     try {
+      console.log("Editing comment:", { id: commentId, content });
       const response = await api.put(
         "/comments",
         { id: commentId, content },
@@ -163,14 +177,17 @@ export default function ArticleDetail() {
           },
         }
       );
-      if (response.data.success) {
-        setNotification({ message: "Komentar berhasil diperbarui!", type: "success" });
+      if (response.data.message) {
+        setNotification({ message: "Comment updated successfully!", type: "success" });
+        setEditCommentId(null);
+        setEditCommentContent("");
         await fetchData();
       } else {
-        throw new Error("Gagal memperbarui komentar.");
+        throw new Error("Failed to update comment.");
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.error || "Gagal memperbarui komentar.";
+      console.error("Error editing comment:", error.response?.data);
+      const errorMessage = error.response?.data?.error || "Failed to update comment.";
       setNotification({ message: errorMessage, type: "error" });
     }
   };
@@ -182,6 +199,7 @@ export default function ArticleDetail() {
       return;
     }
     try {
+      console.log("Deleting comment:", { id: commentId });
       const response = await api.delete("/comments", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -189,14 +207,15 @@ export default function ArticleDetail() {
         },
         data: { id: commentId },
       });
-      if (response.data.success) {
-        setNotification({ message: "Komentar berhasil dihapus!", type: "success" });
+      if (response.data.message) {
+        setNotification({ message: "Comment deleted successfully!", type: "success" });
         await fetchData();
       } else {
-        throw new Error("Gagal menghapus komentar.");
+        throw new Error("Failed to delete comment.");
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.error || "Gagal menghapus komentar.";
+      console.error("Error deleting comment:", error.response?.data);
+      const errorMessage = error.response?.data?.error || "Failed to delete comment.";
       setNotification({ message: errorMessage, type: "error" });
     }
   };
@@ -216,10 +235,10 @@ export default function ArticleDetail() {
 
   const handleCommentButtonClick = () => {
     if (commentTextareaRef.current) {
-      commentTextareaRef.current.focus(); // Aktifkan (fokus) text area
+      commentTextareaRef.current.focus();
       const commentSection = document.getElementById("comment-section");
       if (commentSection) {
-        commentSection.scrollIntoView({ behavior: "smooth" }); // Scroll ke bagian komentar
+        commentSection.scrollIntoView({ behavior: "smooth" });
       }
     }
   };
@@ -242,9 +261,9 @@ export default function ArticleDetail() {
         <Navbar />
         <div className="min-h-screen flex items-center justify-center bg-white">
           <div className="text-center">
-            <p className="text-gray-600 text-lg">Artikel tidak ditemukan.</p>
+            <p className="text-gray-600 text-lg">Article not found.</p>
             <Button onClick={() => navigate("/")} color="rose" className="mt-4">
-              Kembali ke Beranda
+              Back to Home
             </Button>
           </div>
         </div>
@@ -258,12 +277,10 @@ export default function ArticleDetail() {
       <Navbar />
       <div className="bg-white py-8 pt-32">
         <div className="container mx-auto max-w-[90%]">
-          {/* Judul */}
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-12 text-center">
             {article.title || "Where does it come from?"}
           </h1>
 
-          {/* Gambar */}
           {article.image && (
             <img
               src={getImageUrl(article.image)}
@@ -272,7 +289,6 @@ export default function ArticleDetail() {
             />
           )}
 
-          {/* Author, Tanggal, dan Tombol Aksi */}
           <div className="flex justify-between items-start mb-6">
             <div className="flex flex-col text-sm text-gray-500">
               <span className="font-medium text-rose-600">
@@ -295,9 +311,9 @@ export default function ArticleDetail() {
                 onClick={() => handleLikeClick(article.id)}
               >
                 {article.liked ? (
-                  <AiFillHeart className="w-5 h-5 text-white" />
+                  <AiFillHeart className="text-white" />
                 ) : (
-                  <FiHeart className="w-5 h-5 stroke-current" />
+                  <FiHeart className="stroke-current" />
                 )}
               </Button>
               <Button
@@ -305,76 +321,102 @@ export default function ArticleDetail() {
                 className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white"
                 onClick={handleCommentButtonClick}
               >
-                <FaComment className="w-5 h-5" />
+                <FaComment />
               </Button>
             </div>
           </div>
 
-          {/* Konten */}
           <div
             className="prose max-w-none text-gray-700 mb-8"
             dangerouslySetInnerHTML={{
               __html: DOMPurify.sanitize(
                 article.content ||
-                  "Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of 'de Finibus Bonorum et Malorum' (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics."
+                  "Contrary to popular belief, Lorem Ipsum is not simply random text..."
               ),
             }}
           />
 
-          {/* Kolom Komentar */}
           <div id="comment-section" className="mb-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Komentar</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Comments</h2>
             <form onSubmit={handleCommentSubmit} className="mb-6">
               <textarea
                 ref={commentTextareaRef}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Tulis komentar Anda..."
+                placeholder="Write your comment..."
                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
                 rows="4"
               />
               <Button type="submit" color="rose" className="mt-2">
-                Kirim Komentar
+                Submit Comment
               </Button>
             </form>
             {comments.length === 0 ? (
-              <p className="text-gray-600">Belum ada komentar.</p>
+              <p className="text-gray-600">No comments yet.</p>
             ) : (
               <div className="space-y-4">
                 {comments.map((comment) => (
-                  <div key={comment.id} className="p-4 rounded-lg">
+                  <div key={comment.id} className="p-4 rounded-lg bg-gray-50">
                     <div className="flex justify-between items-start">
-                      <div>
+                      <div className="w-full">
                         <p className="font-medium text-rose-600">{comment.username}</p>
-                        <p className="text-gray-700">{comment.content}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(comment.created_at).toLocaleString("en-US", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
+                        {editCommentId === comment.id ? (
+                          <div>
+                            <textarea
+                              value={editCommentContent}
+                              onChange={(e) => setEditCommentContent(e.target.value)}
+                              className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
+                              rows="3"
+                            />
+                            <div className="flex gap-2 mt-2">
+                              <Button
+                                color="rose"
+                                onClick={() => {
+                                  setEditCommentId(null);
+                                  setEditCommentContent("");
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                color="green"
+                                onClick={() => handleEditComment(comment.id, editCommentContent)}
+                              >
+                                Save
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-gray-700">{comment.content}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(comment.created_at).toLocaleString("en-US", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </>
+                        )}
                       </div>
-                      {comment.user_id === localStorage.getItem("userId") && (
-                        <div className="flex gap-2">
+                      {(comment.user_id === currentUserId || userRole === "admin") && editCommentId !== comment.id && (
+                        <div className="flex gap-2 ml-4">
                           <Button
                             color="blue"
-                            className="text-xs"
                             onClick={() => {
-                              const newContent = prompt("Edit komentar:", comment.content);
-                              if (newContent) handleEditComment(comment.id, newContent);
+                              setEditCommentId(comment.id);
+                              setEditCommentContent(comment.content);
                             }}
                           >
-                            Edit
+                            <FiEdit />
                           </Button>
                           <Button
                             color="red"
-                            className="text-xs"
                             onClick={() => handleDeleteComment(comment.id)}
                           >
-                            Hapus
+                            <FiTrash2 />
                           </Button>
                         </div>
                       )}
@@ -390,11 +432,11 @@ export default function ArticleDetail() {
       <Modal
         isOpen={isModalOpen}
         onClose={handleModalClose}
-        title="Login Diperlukan"
+        title="Login Required"
         footer={
           <>
             <Button color="rose" onClick={handleModalClose} className="mr-2">
-              Batal
+              Cancel
             </Button>
             <Button color="green" onClick={handleLoginRedirect}>
               Login
@@ -402,7 +444,7 @@ export default function ArticleDetail() {
           </>
         }
       >
-        <p className="text-gray-700">Silakan login untuk menyukai atau mengomentari artikel ini.</p>
+        <p className="text-gray-700">Please log in to like or comment on this article.</p>
       </Modal>
 
       <Footer />
