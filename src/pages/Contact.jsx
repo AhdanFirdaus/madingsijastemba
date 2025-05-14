@@ -101,7 +101,7 @@ export default function Contact() {
           {/* Contact Form */}
           <div className="w-full md:w-2/3">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">CONTACT US</h1>
-            <p className="text-gray-600 mb-8">
+            <p className="text-gray-500 mb-8">
               Any question or remarks? Just write us a message!
             </p>
             <Notification message={notification.message} type={notification.type} loading={loading} />
