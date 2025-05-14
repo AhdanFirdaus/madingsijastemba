@@ -198,17 +198,18 @@ export default function Articles() {
 
     const sanitizedContent = DOMPurify.sanitize(formData.content);
     const data = new FormData();
-    data.append("action", isEditMode ? "update" : "create"); // Tambahkan action
     data.append("title", formData.title);
     data.append("content", sanitizedContent);
     if (formData.category_id) data.append("category_id", formData.category_id);
     if (formData.image) data.append("image", formData.image);
-    if (isEditMode && currentArticle?.id) data.append("id", currentArticle.id); // Untuk PUT
+    if (isEditMode && currentArticle?.id) {
+      data.append("id", currentArticle.id);
+      data.append("_method", "PUT");
+    }
 
     try {
       let response;
       if (isEditMode && currentArticle?.id) {
-        data.append("_method", "PUT"); // Gunakan _method untuk override ke PUT
         response = await api.post(`/articles`, data, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -224,7 +225,7 @@ export default function Articles() {
         });
       }
 
-      if (response.data.success || response.data.message) {
+      if (response.data.message) {
         await fetchArticles();
         setIsModalOpen(false);
         resetForm();
@@ -273,22 +274,45 @@ export default function Articles() {
       return;
     }
 
+    if (!articleToDelete?.id || isNaN(articleToDelete.id)) {
+      setError("Invalid article for deletion.");
+      console.error("Invalid article ID:", articleToDelete?.id);
+      return;
+    }
+
     try {
+      console.log("Deleting article ID:", articleToDelete.id);
       const response = await api.delete("/articles", {
         headers: { Authorization: `Bearer ${token}` },
         data: { id: articleToDelete.id },
       });
 
-      if (response.data.success) {
+      if (response.data.message) {
         setArticles(articles.filter((article) => article.id !== articleToDelete.id));
         setIsConfirmModalOpen(false);
         setArticleToDelete(null);
         setSuccess("Article deleted successfully!");
       } else {
+        console.error("Invalid response:", response.data);
         setError(response.data.error || "Failed to delete article.");
       }
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to delete article.");
+      console.error("Article Deletion Error:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+      let errorMessage = "Failed to delete article. Please try again.";
+      if (err.response?.status === 401) {
+        errorMessage = "Session expired. Please log in again.";
+      } else if (err.response?.status === 403) {
+        errorMessage = "You do not have permission to delete this article.";
+      } else if (err.response?.status === 404) {
+        errorMessage = "Article not found.";
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      }
+      setError(errorMessage);
     }
   };
 
@@ -466,9 +490,16 @@ export default function Articles() {
       return;
     }
 
+    if (!currentArticle?.id || isNaN(currentArticle.id)) {
+      setError("Invalid article for commenting.");
+      console.error("Invalid article ID:", currentArticle?.id);
+      return;
+    }
+
     try {
       let response;
       if (isCommentEditMode && currentComment?.id) {
+        console.log("Editing comment:", { id: currentComment.id, content: commentFormData.content });
         response = await api.put(
           "/comments",
           { id: currentComment.id, content: commentFormData.content },
@@ -477,10 +508,14 @@ export default function Articles() {
           }
         );
       } else {
+        console.log("Creating new comment:", {
+          article_id: Number(currentArticle.id),
+          content: commentFormData.content,
+        });
         response = await api.post(
           "/comments",
           {
-            article_id: currentArticle.id,
+            article_id: Number(currentArticle.id),
             content: commentFormData.content,
           },
           {
@@ -489,25 +524,32 @@ export default function Articles() {
         );
       }
 
-      if (response.data.success || response.data.message) {
+      if (response.data.message) {
         await fetchCommentsAndUpdateState(currentArticle.id);
         setIsCommentModalOpen(false);
         resetCommentForm();
-        setSuccess(
-          `Comment ${isCommentEditMode ? "updated" : "created"} successfully!`
-        );
+        setSuccess(`Comment ${isCommentEditMode ? "updated" : "created"} successfully!`);
       } else {
-        setError(
-          response.data.error ||
-            `Failed to ${isCommentEditMode ? "update" : "create"} comment.`
-        );
+        console.error("Invalid response:", response.data);
+        setError(response.data.error || `Failed to ${isCommentEditMode ? "update" : "create"} comment.`);
       }
     } catch (err) {
-      setError(
-        err.response?.data?.error ||
-          `Failed to ${isCommentEditMode ? "update" : "create"} comment.`
-      );
-      console.error("handleCommentSubmit Error:", err);
+      console.error("Comment Error:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+      let errorMessage = "Failed to create comment. Please try again.";
+      if (err.response?.status === 401) {
+        errorMessage = "Session expired. Please log in again.";
+      } else if (err.response?.status === 403) {
+        errorMessage = "You do not have permission to comment.";
+      } else if (err.response?.status === 404) {
+        errorMessage = "Article not found.";
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      }
+      setError(errorMessage);
     }
   };
 
@@ -530,7 +572,7 @@ export default function Articles() {
         data: { id: commentToDelete.id },
       });
 
-      if (response.data.success || response.data.message) {
+      if (response.data.message) {
         setComments(
           comments.filter((comment) => comment.id !== commentToDelete.id)
         );
@@ -618,24 +660,24 @@ export default function Articles() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {articles.map((article) => (
             <ArticleCard
-                key={article.id}
+              key={article.id}
+              article={article}
+              getImageUrl={getImageUrl}
+              truncateHTML={truncateHTML}
+              onCommentClick={openCommentModal}
+              onEditClick={openEditModal}
+              onDeleteClick={handleDelete}
+            >
+              <ArticleActions
                 article={article}
-                getImageUrl={getImageUrl}
-                truncateHTML={truncateHTML}
                 onCommentClick={openCommentModal}
                 onEditClick={openEditModal}
                 onDeleteClick={handleDelete}
-              >
-                <ArticleActions
-                  article={article}
-                  onCommentClick={openCommentModal}
-                  onEditClick={openEditModal}
-                  onDeleteClick={handleDelete}
-                  showComment={true} // Tampilkan tombol komentar
-                  showEdit={userRole === "admin" || article.user_id === JSON.parse(localStorage.getItem("user") || "{}").id}
-                  showDelete={userRole === "admin" || article.user_id === JSON.parse(localStorage.getItem("user") || "{}").id}
-                />
-              </ArticleCard>
+                showComment={true}
+                showEdit={userRole === "admin" || article.user_id === JSON.parse(localStorage.getItem("user") || "{}").id}
+                showDelete={userRole === "admin" || article.user_id === JSON.parse(localStorage.getItem("user") || "{}").id}
+              />
+            </ArticleCard>
           ))}
         </div>
       )}
