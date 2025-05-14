@@ -268,20 +268,20 @@ export default function Articles() {
 
   const executeDelete = async () => {
     if (!token) {
-      setError("Token tidak ditemukan. Silakan login.");
+      setError("Token not found. Please log in.");
       setIsConfirmModalOpen(false);
       setArticleToDelete(null);
       return;
     }
 
     if (!articleToDelete?.id || isNaN(articleToDelete.id)) {
-      setError("Artikel tidak valid untuk dihapus.");
+      setError("Invalid article for deletion.");
       console.error("Invalid article ID:", articleToDelete?.id);
       return;
     }
 
     try {
-      console.log("Menghapus artikel ID:", articleToDelete.id);
+      console.log("Deleting article ID:", articleToDelete.id);
       const response = await api.delete("/articles", {
         headers: { Authorization: `Bearer ${token}` },
         data: { id: articleToDelete.id },
@@ -291,28 +291,28 @@ export default function Articles() {
         setArticles(articles.filter((article) => article.id !== articleToDelete.id));
         setIsConfirmModalOpen(false);
         setArticleToDelete(null);
-        setSuccess("Artikel berhasil dihapus!");
+        setSuccess("Article deleted successfully!");
       } else {
-        console.error("Respon tidak valid:", response.data);
-        setError(response.data.error || "Gagal menghapus artikel.");
+        console.error("Invalid response:", response.data);
+        setError(response.data.error || "Failed to delete article.");
       }
     } catch (err) {
-      console.error("Error Hapus Artikel:", {
+      console.error("Article Deletion Error:", {
         status: err.response?.status,
         data: err.response?.data,
         message: err.message,
       });
-      let pesanError = "Gagal menghapus artikel. Coba lagi.";
+      let errorMessage = "Failed to delete article. Please try again.";
       if (err.response?.status === 401) {
-        pesanError = "Sesi kadaluarsa. Silakan login lagi.";
+        errorMessage = "Session expired. Please log in again.";
       } else if (err.response?.status === 403) {
-        pesanError = "Anda tidak punya izin untuk menghapus artikel ini.";
+        errorMessage = "You do not have permission to delete this article.";
       } else if (err.response?.status === 404) {
-        pesanError = "Artikel tidak ditemukan.";
+        errorMessage = "Article not found.";
       } else if (err.response?.data?.error) {
-        pesanError = err.response.data.error;
+        errorMessage = err.response.data.error;
       }
-      setError(pesanError);
+      setError(errorMessage);
     }
   };
 
@@ -481,17 +481,17 @@ export default function Articles() {
     setSuccess("");
 
     if (!token) {
-      setError("Token tidak ditemukan. Silakan login.");
+      setError("Token not found. Please log in.");
       return;
     }
 
     if (!commentFormData.content) {
-      setError("Konten komentar wajib diisi.");
+      setError("Comment content is required.");
       return;
     }
 
     if (!currentArticle?.id || isNaN(currentArticle.id)) {
-      setError("Artikel tidak valid untuk komentar.");
+      setError("Invalid article for commenting.");
       console.error("Invalid article ID:", currentArticle?.id);
       return;
     }
@@ -499,7 +499,7 @@ export default function Articles() {
     try {
       let response;
       if (isCommentEditMode && currentComment?.id) {
-        console.log("Mengedit komentar:", { id: currentComment.id, content: commentFormData.content });
+        console.log("Editing comment:", { id: currentComment.id, content: commentFormData.content });
         response = await api.put(
           "/comments",
           { id: currentComment.id, content: commentFormData.content },
@@ -508,7 +508,7 @@ export default function Articles() {
           }
         );
       } else {
-        console.log("Membuat komentar baru:", {
+        console.log("Creating new comment:", {
           article_id: Number(currentArticle.id),
           content: commentFormData.content,
         });
@@ -528,28 +528,28 @@ export default function Articles() {
         await fetchCommentsAndUpdateState(currentArticle.id);
         setIsCommentModalOpen(false);
         resetCommentForm();
-        setSuccess(`Komentar ${isCommentEditMode ? "diperbarui" : "dibuat"} berhasil!`);
+        setSuccess(`Comment ${isCommentEditMode ? "updated" : "created"} successfully!`);
       } else {
-        console.error("Respon tidak valid:", response.data);
-        setError(response.data.error || `Gagal ${isCommentEditMode ? "memperbarui" : "membuat"} komentar.`);
+        console.error("Invalid response:", response.data);
+        setError(response.data.error || `Failed to ${isCommentEditMode ? "update" : "create"} comment.`);
       }
     } catch (err) {
-      console.error("Error Komentar:", {
+      console.error("Comment Error:", {
         status: err.response?.status,
         data: err.response?.data,
         message: err.message,
       });
-      let pesanError = "Gagal membuat komentar. Coba lagi.";
+      let errorMessage = "Failed to create comment. Please try again.";
       if (err.response?.status === 401) {
-        pesanError = "Sesi kadaluarsa. Silakan login lagi.";
+        errorMessage = "Session expired. Please log in again.";
       } else if (err.response?.status === 403) {
-        pesanError = "Anda tidak punya izin untuk berkomentar.";
+        errorMessage = "You do not have permission to comment.";
       } else if (err.response?.status === 404) {
-        pesanError = "Artikel tidak ditemukan.";
+        errorMessage = "Article not found.";
       } else if (err.response?.data?.error) {
-        pesanError = err.response.data.error;
+        errorMessage = err.response.data.error;
       }
-      setError(pesanError);
+      setError(errorMessage);
     }
   };
 
