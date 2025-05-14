@@ -10,6 +10,7 @@ export default defineConfig({
     port: 5173,
     allowedHosts: [
       '.ngrok-free.app', // ⬅️ izinkan semua subdomain *.ngrok-free.app
+      '.trycloudflare.com', // ⬅️ izinkan semua subdomain *.trycloudflare.com
     ]
   }
 })
