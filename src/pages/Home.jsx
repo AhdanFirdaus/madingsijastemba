@@ -69,10 +69,17 @@ export default function Home() {
       setIsModalOpen(true);
       return;
     }
+
+    // Find the article to determine its current like status
+    const article = articles.find((a) => a.id === articleId);
+    const isLiked = article?.liked || false;
+    const action = isLiked ? "unlike" : "like";
+
     try {
+      console.log("Sending request:", { action, articleId });
       const response = await api.post(
         "/articles",
-        { action: "like", articleId },
+        { action, articleId },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -80,19 +87,24 @@ export default function Home() {
           },
         }
       );
-      setNotification({ message: response.data.message || "Artikel berhasil disukai!", type: "success" });
+      setNotification({ 
+        message: response.data.message || (isLiked ? "Like berhasil dihapus!" : "Artikel berhasil disukai!"), 
+        type: "success" 
+      });
 
+      // Update the article's liked status in state
       setArticles((prevArticles) =>
         prevArticles.map((article) =>
-          article.id === articleId ? { ...article, liked: true } : article
+          article.id === articleId ? { ...article, liked: !isLiked } : article
         )
       );
 
+      // Refresh data to ensure consistency with server
       await new Promise((resolve) => setTimeout(resolve, 2000));
       await fetchData();
     } catch (error) {
-      console.error("Error like:", error.response?.status, error.response?.data);
-      let errorMessage = "Gagal menyukai artikel.";
+      console.error("Error handling like/unlike:", error.response?.status, error.response?.data);
+      let errorMessage = isLiked ? "Gagal menghapus like." : "Gagal menyukai artikel.";
       if (error.response) {
         switch (error.response.status) {
           case 401:
@@ -102,7 +114,7 @@ export default function Home() {
             errorMessage = "Artikel tidak ditemukan.";
             break;
           case 400:
-            errorMessage = error.response.data.error || "Anda sudah menyukai artikel ini.";
+            errorMessage = error.response.data.error || (isLiked ? "Anda belum menyukai artikel ini." : "Anda sudah menyukai artikel ini.");
             break;
           case 500:
             errorMessage = error.response.data.error || "Error server. Coba lagi nanti.";
@@ -248,7 +260,7 @@ export default function Home() {
                       </p>
                       <div
                         className="flex justify-between items-center mt-auto"
-                        onClick={(e) => e.stopPropagation()} // Mencegah navigasi saat klik tombol like
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <div>
                           <div className="text-xs">

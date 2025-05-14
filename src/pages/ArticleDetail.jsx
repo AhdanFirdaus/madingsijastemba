@@ -60,10 +60,15 @@ export default function ArticleDetail() {
       setIsModalOpen(true);
       return;
     }
+
+    const isLiked = article?.liked || false;
+    const action = isLiked ? "unlike" : "like";
+
     try {
+      console.log("Sending request:", { action, articleId });
       const response = await api.post(
         "/articles",
-        { action: "like", articleId },
+        { action, articleId },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -71,12 +76,36 @@ export default function ArticleDetail() {
           },
         }
       );
-      setNotification({ message: response.data.message || "Artikel berhasil disukai!", type: "success" });
-      setArticle((prev) => ({ ...prev, liked: true }));
+      setNotification({
+        message: response.data.message || (isLiked ? "Like berhasil dihapus!" : "Artikel berhasil disukai!"),
+        type: "success",
+      });
+      setArticle((prev) => ({ ...prev, liked: !isLiked }));
       await new Promise((resolve) => setTimeout(resolve, 2000));
       await fetchData();
     } catch (error) {
-      const errorMessage = error.response?.data?.error || "Gagal menyukai artikel. Coba lagi.";
+      console.error("Error handling like/unlike:", error.response?.status, error.response?.data);
+      let errorMessage = isLiked ? "Gagal menghapus like." : "Gagal menyukai artikel.";
+      if (error.response) {
+        switch (error.response.status) {
+          case 401:
+            errorMessage = "Tidak diizinkan. Silakan login lagi.";
+            break;
+          case 404:
+            errorMessage = "Artikel tidak ditemukan.";
+            break;
+          case 400:
+            errorMessage = error.response.data.error || (isLiked ? "Anda belum menyukai artikel ini." : "Anda sudah menyukai artikel ini.");
+            break;
+          case 500:
+            errorMessage = error.response.data.error || "Error server. Coba lagi nanti.";
+            break;
+          default:
+            errorMessage = error.response.data.error || "Terjadi error tak terduga.";
+        }
+      } else {
+        errorMessage = "Error jaringan. Periksa koneksi Anda.";
+      }
       setNotification({ message: errorMessage, type: "error" });
     }
   };
@@ -375,8 +404,6 @@ export default function ArticleDetail() {
       >
         <p className="text-gray-700">Silakan login untuk menyukai atau mengomentari artikel ini.</p>
       </Modal>
-
-      {notification.message && <Notification message={notification.message} type={notification.type} />}
 
       <Footer />
     </>
