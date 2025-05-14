@@ -33,7 +33,7 @@ export default function Home() {
         .slice(0, 10)
         .map((article) => ({
           ...article,
-          liked: article.liked !== undefined ? article.liked : false, // Gunakan liked dari backend jika ada
+          liked: article.liked !== undefined ? article.liked : false,
         }));
       setArticles(sortedArticles);
 
@@ -69,10 +69,17 @@ export default function Home() {
       setIsModalOpen(true);
       return;
     }
+
+    // Find the article to determine its current like status
+    const article = articles.find((a) => a.id === articleId);
+    const isLiked = article?.liked || false;
+    const action = isLiked ? "unlike" : "like";
+
     try {
+      console.log("Sending request:", { action, articleId });
       const response = await api.post(
         "/articles",
-        { action: "like", articleId },
+        { action, articleId },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -80,21 +87,24 @@ export default function Home() {
           },
         }
       );
-      setNotification({ message: response.data.message || "Artikel berhasil disukai!", type: "success" });
+      setNotification({ 
+        message: response.data.message || (isLiked ? "Like berhasil dihapus!" : "Artikel berhasil disukai!"), 
+        type: "success" 
+      });
 
-      // Perbarui state lokal segera untuk UX
+      // Update the article's liked status in state
       setArticles((prevArticles) =>
         prevArticles.map((article) =>
-          article.id === articleId ? { ...article, liked: true } : article
+          article.id === articleId ? { ...article, liked: !isLiked } : article
         )
       );
 
-      // Tingkatkan delay menjadi 2 detik untuk memastikan sinkronisasi
+      // Refresh data to ensure consistency with server
       await new Promise((resolve) => setTimeout(resolve, 2000));
       await fetchData();
     } catch (error) {
-      console.error("Error like:", error.response?.status, error.response?.data);
-      let errorMessage = "Gagal menyukai artikel.";
+      console.error("Error handling like/unlike:", error.response?.status, error.response?.data);
+      let errorMessage = isLiked ? "Gagal menghapus like." : "Gagal menyukai artikel.";
       if (error.response) {
         switch (error.response.status) {
           case 401:
@@ -104,7 +114,7 @@ export default function Home() {
             errorMessage = "Artikel tidak ditemukan.";
             break;
           case 400:
-            errorMessage = error.response.data.error || "Anda sudah menyukai artikel ini.";
+            errorMessage = error.response.data.error || (isLiked ? "Anda belum menyukai artikel ini." : "Anda sudah menyukai artikel ini.");
             break;
           case 500:
             errorMessage = error.response.data.error || "Error server. Coba lagi nanti.";
@@ -229,7 +239,10 @@ export default function Home() {
               <>
                 {/* Latest Article (Custom Section) */}
                 {latestArticle && (
-                  <div className="mb-12 bg-white shadow-md rounded-2xl overflow-hidden flex flex-col lg:flex-row h-auto lg:h-72">
+                  <div
+                    onClick={() => navigate(`/articles/${latestArticle.id}`)}
+                    className="mb-12 bg-white shadow-md rounded-2xl overflow-hidden flex flex-col lg:flex-row h-auto lg:h-72 cursor-pointer"
+                  >
                     <div className="w-full lg:w-1/3">
                       <img
                         src={getImageUrl(latestArticle.image)}
@@ -245,7 +258,10 @@ export default function Home() {
                       <p className="text-gray-600 mb-4 flex-grow">
                         {truncateHTML(latestArticle.content, 350)}
                       </p>
-                      <div className="flex justify-between items-center mt-auto">
+                      <div
+                        className="flex justify-between items-center mt-auto"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div>
                           <div className="text-xs">
                             <span className="font-medium text-rose-600">By: {latestArticle.username || "Anonim"}</span>
@@ -316,8 +332,7 @@ export default function Home() {
         <p className="text-gray-700">Please log in to like this article.</p>
       </Modal>
 
-      {/* Footer */}
-      <Footer/>
+      <Footer />
     </>
   );
 }

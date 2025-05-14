@@ -13,7 +13,7 @@ import Home from './Pages/Home';
 import Blog from './Pages/Blog';
 import About from './Pages/About';
 import Contact from './Pages/Contact';
-
+import ArticleDetail from './Pages/ArticleDetail'; 
 
 // ProtectedRoute Component to secure admin routes
 function ProtectedRoute({ children }) {
@@ -43,7 +43,7 @@ function ProtectedRoute({ children }) {
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <Home/>,
+    element: <Home />,
     errorElement: <ErrorPage />,
   },
   {
@@ -65,6 +65,11 @@ const router = createBrowserRouter([
   {
     path: 'contact',
     element: <Contact />,
+  },
+  {
+    path: 'articles/:id', // Tambahkan rute untuk ArticleDetail
+    element: <ArticleDetail />,
+    errorElement: <ErrorPage />,
   },
   {
     path: 'admin',

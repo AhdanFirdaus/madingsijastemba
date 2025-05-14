@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router";
 import DOMPurify from "dompurify";
 
 const ArticleCard = ({
@@ -9,8 +10,18 @@ const ArticleCard = ({
   truncateHTML,
   children,
 }) => {
+  const navigate = useNavigate();
+
+  // Fungsi untuk menangani klik kartu
+  const handleCardClick = () => {
+    navigate(`/articles/${article.id}`);
+  };
+
   return (
-    <div className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col h-full">
+    <div
+      onClick={handleCardClick}
+      className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col h-full cursor-pointer"
+    >
       {article.image && (
         <img
           src={getImageUrl(article.image)}
@@ -38,24 +49,31 @@ const ArticleCard = ({
         <div
           className="text-gray-600 text-sm line-clamp-3 flex-grow mt-1"
           dangerouslySetInnerHTML={{
-            __html: DOMPurify.sanitize(truncateHTML(article.content || "Tidak ada konten", 100)),
+            __html: DOMPurify.sanitize(
+              truncateHTML(article.content || "Tidak ada konten", 100)
+            ),
           }}
         />
 
         {/* Info penulis/tanggal dan actions dalam satu baris */}
-        <div className="flex flex-row justify-between items-center mt-3">
+        <div
+          className="flex flex-row justify-between items-center mt-3"
+          onClick={(e) => e.stopPropagation()} // Mencegah navigasi saat klik actions
+        >
           <div className="text-xs text-rose-600">
-            <span className="font-medium">By: {article.username || "Anonim"}</span>
+            <span className="font-medium">
+              By: {article.username || "Anonim"}
+            </span>
             <br />
             <span className="text-gray-500">
               {article.created_at
-                ? new Date(article.created_at).toLocaleString('en-US', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
+                ? new Date(article.created_at).toLocaleString("en-US", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
                     hour12: false,
                   })
                 : "Tanggal tidak tersedia"}
