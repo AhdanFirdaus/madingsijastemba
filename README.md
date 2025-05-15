@@ -1,12 +1,79 @@
-# React + Vite
+# 📰 MadingsijaStemba
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**MadingsijaStemba** adalah platform mading digital interaktif untuk SMK Negeri 7 Semarang, dirancang untuk menyatukan ide, kreativitas, dan informasi dari siswa, oleh siswa, untuk seluruh warga sekolah.
 
-Currently, two official plugins are available:
+![Cuplikan](src/assets/banner.png)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 📌 Fitur Utama
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+🔹 **User Biasa**
+- Memberikan komentar pada artikel
+- Membaca konten mading digital
+- Memberikan like pada artikel
+
+🔹 **Writer**
+- CRUD (Create, Read, Update, Delete) artikel (wip)
+
+🔹 **Admin**
+- Kelola seluruh pengguna dan artikel
+- Pantau statistik dan aktivitas platform
+- Moderasi komentar
+
+---
+
+## 🛠️ Teknologi yang Digunakan
+
+| Frontend | Backend | Database | Tools |
+|----------|---------|----------|-------|
+| ReactJS  | PHP (REST API) | MySQL / MariaDB | Postman, VSCode, GitHub |
+
+---
+
+## ⚙️ Struktur Backend API
+
+```bash
+.
+|-- ./.htaccess
+|-- ./articles.php
+|-- ./auth
+|   |-- ./auth/login.php
+|   `-- ./auth/register.php
+|-- ./categories.php
+|-- ./comments.php
+|-- ./composer.json
+|-- ./composer.lock
+|-- ./config
+|   `-- ./config/db.php
+|-- ./db.sql
+|-- ./stats.php
+|-- ./uploads
+|-- ./users.php
+|-- ./utils
+|   `-- ./utils/auth.php
+`-- ./vendor
+```
+
+## 🚀 Cara Menjalankan Proyek
+
+1. **Clone repositori**
+```sh
+git clone https://github.com/AhdanFirdaus/madingsijastemba.git
+cd madingsijastemba
+```
+
+2. **Jalankan Backend (PHP)**
+
+3. **Jalankan Frontend (React)**
+```sh
+npm install
+npm run dev
+```
+
+4. **Akses halaman**
+```sh
+http://localhost:5173/
+```
+
+## 🙏 Terima Kasih
