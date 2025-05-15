@@ -100,7 +100,7 @@ export default function Contact() {
 
           {/* Contact Form */}
           <div className="w-full md:w-2/3">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">CONTACT US</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Contact Us</h1>
             <p className="text-gray-500 mb-8">
               Any question or remarks? Just write us a message!
             </p>
